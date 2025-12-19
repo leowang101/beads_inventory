@@ -5,13 +5,14 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "node --watch index.js"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
-    "express": "^4.19.2",
+    "express": "^4.22.1",
     "multer": "^1.4.5-lts.1",
-    "mysql2": "^3.11.5",
+    "mysql2": "^3.16.0",
     "openai": "^6.10.0"
   }
 }
