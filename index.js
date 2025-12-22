@@ -575,9 +575,8 @@ async function ensureUserDefaults(userId) {
   );
   await safeQuery(
     `INSERT IGNORE INTO user_settings(user_id, skey, svalue) VALUES
-     (?, 'remindThreshold', '500'),
      (?, 'criticalThreshold', '300')`,
-    [userId, userId]
+    [userId]
   );
 }
 
@@ -684,9 +683,8 @@ app.post("/api/register", async (req, res) => {
       );
       await conn.query(
         `INSERT IGNORE INTO user_settings(user_id, skey, svalue) VALUES
-         (?, 'remindThreshold', '500'),
          (?, 'criticalThreshold', '300')`,
-        [userId, userId]
+        [userId]
       );
 
 
@@ -785,7 +783,6 @@ app.get("/api/settings", requireAuth, async (req, res) => {
     (rows || []).forEach(r => map[r.skey] = r.svalue);
     sendJson(res, 200, {
       ok: true,
-      remindThreshold: Number(map.remindThreshold ?? 500),
       criticalThreshold: Number(map.criticalThreshold ?? 300),
       buildTag: BUILD_TAG
     });
@@ -796,21 +793,18 @@ app.get("/api/settings", requireAuth, async (req, res) => {
 
 app.post("/api/settings", requireAuth, async (req, res) => {
   try {
-    const remind = Number(req.body?.remindThreshold);
     const critical = Number(req.body?.criticalThreshold);
-    if (!Number.isInteger(remind) || remind <= 0) return sendJson(res, 400, { ok: false, message: "提醒数量必须为正整数" });
     if (!Number.isInteger(critical) || critical <= 0) return sendJson(res, 400, { ok: false, message: "告急数量必须为正整数" });
-    if (remind < critical) return sendJson(res, 400, { ok: false, message: "提醒数量应大于或等于告急数量" });
 
-    await safeQuery(
-      "INSERT INTO user_settings(user_id, skey, svalue) VALUES(?,?,?) ON DUPLICATE KEY UPDATE svalue=VALUES(svalue)",
-      [req.user.id, "remindThreshold", String(remind)]
-    );
     await safeQuery(
       "INSERT INTO user_settings(user_id, skey, svalue) VALUES(?,?,?) ON DUPLICATE KEY UPDATE svalue=VALUES(svalue)",
       [req.user.id, "criticalThreshold", String(critical)]
     );
-    sendJson(res, 200, { ok: true });
+
+    // 历史字段：remindThreshold 不再使用（保留不影响兼容），也可选择性清理
+    // await safeQuery("DELETE FROM user_settings WHERE user_id=? AND skey='remindThreshold'", [req.user.id]);
+
+    sendJson(res, 200, { ok: true, criticalThreshold: critical });
   } catch (e) {
     sendJson(res, 500, { ok: false, message: e.message });
   }

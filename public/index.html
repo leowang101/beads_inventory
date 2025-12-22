@@ -262,7 +262,10 @@ body.theme-light .float-nav .icon-btn{
   .toast-stack{ bottom: 96px; }
 }
 
-.sort-group{ display:flex; gap:10px; align-items:center; }
+.sort-group{ display:flex; gap:10px; align-items:center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .btn-sort{
   padding:10px 12px;
   border-radius:12px;
@@ -276,7 +279,143 @@ body.theme-light .float-nav .icon-btn{
   border-color: rgba(34,197,94,.35);
 }
 
-    main{
+    
+/* —— 余量排序行：增加“标准/紧凑”布局切换 —— */
+.sort-row{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:12px;
+  flex-wrap:wrap;
+  width:100%;
+}
+
+.view-toggle{
+    margin-left:auto;
+display:inline-flex;
+  border:1px solid var(--border);
+  border-radius:999px;
+  overflow:hidden;
+  background: rgba(255,255,255,.04);
+}
+body.theme-light .view-toggle{ background: rgba(15,23,42,.04); }
+
+.view-toggle .view-tab{
+  border:0;
+  background: transparent;
+  padding:10px 16px;
+  border-radius:0;
+  font-size:12px;
+  cursor:pointer;
+  white-space:nowrap;
+  transform:none !important;
+}
+.view-toggle .view-tab:hover{ border-color: transparent; }
+.view-toggle .view-tab.active{
+  background: rgba(255,255,255,.22);
+}
+body.theme-light .view-toggle .view-tab.active{
+  background: rgba(15,23,42,.10);
+}
+
+/* —— 紧凑布局卡片（参考截图） —— */
+.card.compact{
+  padding:12px;
+  gap:10px;
+}
+.card.compact .status{
+  position: static;
+  top:auto;
+  right:auto;
+}
+.card.compact .card-top{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.card.compact .spacer{ flex:1 1 auto; }
+.card.compact .card-more-btn{
+  /* iOS 风格：更小更精致 */
+  width:22px;
+  height:22px;
+  border-radius:999px;
+  font-size:14px;
+  padding:0;
+  line-height:1;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.14);
+}
+body.theme-light .card.compact .card-more-btn{ background: rgba(15,23,42,.03); border: 1px solid rgba(15,23,42,.10); }
+
+.card.compact .compact-block{
+  height:48px;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  padding:0 12px;
+  background-image: linear-gradient(180deg, rgba(255,255,255,.12), rgba(0,0,0,.10));
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+}
+body.theme-light .card.compact .compact-block{
+  border-color: rgba(15,23,42,.10);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.04);
+  background-image: linear-gradient(180deg, rgba(255,255,255,.18), rgba(0,0,0,.04));
+}
+
+.card.compact .compact-remain{
+  /* 与标准模式 remain 保持一致（字体/字号/字重） */
+  font-size:22px;
+  font-weight:700;
+  display:flex;
+  align-items:baseline;
+  gap:4px;
+  text-shadow:none;
+}
+.card.compact .compact-remain.debt{ color: var(--danger); }
+
+.card.compact .compact-remain small{
+  font-size:11px;
+  opacity:.85;
+  font-weight:500;
+}
+
+.card-menu{
+  position:absolute;
+  top:38px;
+  right:8px;
+  min-width: 108px;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(17,27,39,.92);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  z-index: 30;
+}
+body.theme-light .card-menu{
+  background: rgba(255,255,255,.92);
+}
+
+.card-menu .menu-item{
+  width:100%;
+  border:0;
+  background: transparent;
+  padding:7px 8px;
+  border-radius: 9px;
+  font-size:12px;
+  transform:none !important;
+}
+.card-menu .menu-item:hover{
+  background: rgba(255,255,255,.08);
+}
+body.theme-light .card-menu .menu-item:hover{
+  background: rgba(15,23,42,.06);
+}
+
+main{
       max-width:1200px;
       margin:18px auto 60px;
       padding:0 20px calc(120px + env(safe-area-inset-bottom));
@@ -367,7 +506,9 @@ body.theme-light .float-nav .icon-btn{
       gap:10px 12px;
       align-items:end;
     }
-    .field label{
+    
+    .inventory-filters{ grid-template-columns: 1fr; }
+.field label{
       font-size:11px; color:var(--muted);
       display:block; margin-bottom:6px;
     }
@@ -1226,6 +1367,53 @@ body.theme-light #recordsDialog .check .switch{
 }
 
 
+
+/* 移动端：余量排序与布局切换同一行，并缩小切换按钮（更精致） */
+@media (max-width: 720px){
+  /* 移动端：同一行展示，右侧 tab 固定贴右；左侧排序按钮不够放时可横向滚动 */
+  .sort-row{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    width:100%;
+  }
+
+  .sort-group{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sort-group::-webkit-scrollbar{ display:none; }
+
+  .view-toggle{
+    flex: 0 0 auto;
+    margin-left: 8px;   /* ✅ 确保与排序按钮有间距 */
+  }
+
+  /* tab 更精致 */
+  .view-toggle .view-tab{
+    padding: 7px 12px;
+    font-size: 11px;
+  }
+}
+
+
+.sort-row::-webkit-scrollbar{ display:none; }
+
+  .view-toggle{ margin-left: auto; }
+  .view-toggle .view-tab{
+    padding: 7px 12px;
+    font-size: 11px;
+  }
+}
+
+
+.sort-row .view-toggle{ margin-left:auto !important; }
 </style>
 </head>
 <body class="theme-dark">
@@ -1257,21 +1445,13 @@ body.theme-light #recordsDialog .check .switch{
   <main>
     <section class="panel" id="alertsPanel">
       <div class="panel-title">
-        <h2>余量不足提醒</h2>
-        <span class="panel-hint">云端数据实时计算</span>
-      </div>
+        <h2>库存不足提醒</h2>
+        </div>
       <div class="alerts-grid">
         <div class="alert-card">
           <div class="alert-head">
-            <h3>余量 &lt; <span id="labelRemindThreshold">500</span></h3>
-            <span class="count-badge" id="countLt500">0</span>
-          </div>
-          <div class="pill-list" id="listLt500"></div>
-        </div>
-        <div class="alert-card">
-          <div class="alert-head">
-            <h3>余量 &lt; <span id="labelCriticalThreshold">300</span>（库存紧张）</h3>
-            <span class="count-badge" id="countLt300">0</span>
+            <h3>库存余量 &lt; <span id="labelCriticalThreshold">300</span></h3>
+            <span class="count-badge" id="countLt300">色号数量：0</span>
           </div>
           <div class="pill-list" id="listLt300"></div>
         </div>
@@ -1283,33 +1463,25 @@ body.theme-light #recordsDialog .check .switch{
         <h2>库存余量</h2>
         <div class="inventory-meta">
           <span class="meta-chip" id="metaTotal">—</span>
-          <span class="meta-chip" id="metaTight">—</span>
-                  </div>
+</div>
       </div>
 
-      <div class="filters">
-        <div class="field">
-          <label for="searchCode">搜索色号</label>
-          <input type="text" id="searchCode" placeholder="例如 F11" maxlength="10" />
-        </div>
-        <div class="field">
-          <label for="filterLessThan">筛选余量小于</label>
-          <input type="number" id="filterLessThan" placeholder="留空=全部" />
-        </div>
-        <div class="field">
-  <label>余量排序</label>
-  <div class="sort-group">
-    <button class="btn-sort" id="btnSortAsc">由少到多</button>
-    <button class="btn-sort" id="btnSortDesc">由多到少</button>
+      <div class="filters inventory-filters">
+<div class="field">
+  <label>库存排序</label>
+  <div class="sort-row">
+    <div class="sort-group">
+      <button class="btn-sort" id="btnSortAsc">由少到多</button>
+      <button class="btn-sort" id="btnSortDesc">由多到少</button>
+    </div>
+
+    <div class="view-toggle" role="tablist" aria-label="布局切换">
+      <button type="button" class="view-tab active" id="btnViewStandard" data-view="standard">标准</button>
+      <button type="button" class="view-tab" id="btnViewCompact" data-view="compact">紧凑</button>
+    </div>
   </div>
 </div>
-
-        
-        <div class="field">
-          <label for="btnClearFilter">&nbsp;</label>
-          <button id="btnClearFilter">清空筛选</button>
-        </div>
-      </div>
+</div>
 
       <div class="divider"></div>
 
@@ -1672,15 +1844,10 @@ body.theme-light #recordsDialog .check .switch{
         </div>
         <div class="settings-panels">
           <div class="settings-panel active" id="settingsPanelThreshold">
-            <div class="modal-field">
-              <label for="remindInput">提醒数量（默认 500）</label>
-              <input type="number" id="remindInput" min="1" step="1" />
-              <div class="help">余量低于该值时会出现在“余量 &lt; 提醒数量”的列表</div>
-            </div>
-            <div class="modal-field">
-              <label for="criticalInput">告急数量（默认 300）</label>
+<div class="modal-field">
+              <label for="criticalInput">提醒数量（默认 300）</label>
               <input type="number" id="criticalInput" min="1" step="1" />
-              <div class="help">余量低于该值时会出现在“库存紧张”列表，并在卡片中标记为库存紧张</div>
+              <div class="help">余量低于该值时会出现在“库存提醒”的列表，并标记为库存紧张</div>
             </div>
           </div>
 
@@ -1801,10 +1968,89 @@ const API_BASE = window.location.origin;
     let COLORS = {};
     let INVENTORY = {};
     let LAST_SYNC = null;
-
-    let REMIND_THRESHOLD = 500;
     let CRITICAL_THRESHOLD = 300;
     let SORT_MODE = null; // null | 'asc' | 'desc'
+
+    // ====== View Mode (标准/紧凑) ======
+    const VIEW_MODE_KEY = "beads_view_mode_v1";
+    let VIEW_MODE = localStorage.getItem(VIEW_MODE_KEY) || "standard"; // "standard" | "compact"
+    // 用于 CSS/调试（不影响逻辑）
+    document.body.dataset.view = VIEW_MODE;
+
+    function bindSortAndViewToggles(){
+      const btnAsc = document.getElementById("btnSortAsc");
+      const btnDesc = document.getElementById("btnSortDesc");
+      const btnStd = document.getElementById("btnViewStandard");
+      const btnCmp = document.getElementById("btnViewCompact");
+
+      // --- view mode ---
+      const syncViewUI = ()=>{
+        if(btnStd) btnStd.classList.toggle("active", VIEW_MODE==="standard");
+        if(btnCmp) btnCmp.classList.toggle("active", VIEW_MODE==="compact");
+      };
+      const setViewMode = (mode)=>{
+        if(mode!=="standard" && mode!=="compact") return;
+        VIEW_MODE = mode;
+        try{ localStorage.setItem(VIEW_MODE_KEY, VIEW_MODE); }catch{}
+        document.body.dataset.view = VIEW_MODE;
+        syncViewUI();
+        // 实时刷新列表
+        try{ renderInventoryGrid(); }catch{}
+      };
+
+      if(btnStd) btnStd.addEventListener("click", ()=>setViewMode("standard"));
+      if(btnCmp) btnCmp.addEventListener("click", ()=>setViewMode("compact"));
+      // 初始化一次（读取 localStorage 后同步 UI）
+      syncViewUI();
+
+      // --- sort mode ---
+      const syncSortUI = ()=>{
+        if(btnAsc) btnAsc.classList.toggle("active", SORT_MODE==="asc");
+        if(btnDesc) btnDesc.classList.toggle("active", SORT_MODE==="desc");
+      };
+      const setSortMode = (mode)=>{
+        SORT_MODE = mode; // null | 'asc' | 'desc'
+        syncSortUI();
+        try{ renderInventoryGrid(); }catch{}
+      };
+      if(btnAsc) btnAsc.addEventListener("click", ()=>{
+        setSortMode(SORT_MODE==="asc" ? null : "asc");
+      });
+      if(btnDesc) btnDesc.addEventListener("click", ()=>{
+        setSortMode(SORT_MODE==="desc" ? null : "desc");
+      });
+      syncSortUI();
+    }
+
+
+    // ====== Card "更多" 菜单（紧凑布局） ======
+    let OPEN_CARD_MENU = null;
+    function closeCardMenu(){
+      if(OPEN_CARD_MENU){
+        OPEN_CARD_MENU.hidden = true;
+        OPEN_CARD_MENU = null;
+      }
+    }
+
+    // 根据色块背景（hex）计算对比文字色，避免数字看不清
+    function contrastTextColor(hex){
+      if(!hex || typeof hex!=="string") return "#111827";
+      let h = hex.trim();
+      if(h[0]==="#") h=h.slice(1);
+      if(h.length===3) h = h.split("").map(c=>c+c).join("");
+      if(h.length!==6) return "#111827";
+      const r = parseInt(h.slice(0,2),16);
+      const g = parseInt(h.slice(2,4),16);
+      const b = parseInt(h.slice(4,6),16);
+      // YIQ: 0(暗) - 255(亮)
+      const yiq = (r*299 + g*587 + b*114) / 1000;
+      // 背景偏亮用深色字，偏暗用浅色字
+      return yiq >= 160 ? "#111827" : "#f6f8fb";
+    }
+
+    document.addEventListener("click", ()=>closeCardMenu());
+
+    window.addEventListener("scroll", ()=>closeCardMenu(), { passive:true });
 
     // ====== Auth / Guest(Local) ======
     const TOKEN_KEY = "beads_token_v1";
@@ -2131,8 +2377,7 @@ const API_BASE = window.location.origin;
         localStorage.setItem(GUEST_KEY, JSON.stringify({
           colors: COLORS,
           inventory: INVENTORY,
-          remind: REMIND_THRESHOLD,
-          critical: CRITICAL_THRESHOLD,
+critical: CRITICAL_THRESHOLD,
           history: GUEST_HISTORY
         }));
       }catch{}
@@ -2146,8 +2391,7 @@ const API_BASE = window.location.origin;
         if(data && data.colors && data.inventory){
           COLORS = data.colors || {};
           INVENTORY = data.inventory || {};
-          REMIND_THRESHOLD = Number(data.remind ?? 500) || 500;
-          CRITICAL_THRESHOLD = Number(data.critical ?? 300) || 300;
+CRITICAL_THRESHOLD = Number(data.critical ?? 300) || 300;
           GUEST_HISTORY = Array.isArray(data.history) ? data.history : [];
           return true;
         }
@@ -2382,7 +2626,7 @@ function formatTimeSecondParts(iso){
           return {ok:true,data};
         }
         if(path==="/api/settings"){
-          return {ok:true, remindThreshold: REMIND_THRESHOLD, criticalThreshold: CRITICAL_THRESHOLD};
+          return {ok:true, criticalThreshold: CRITICAL_THRESHOLD};
         }
         if(path.startsWith("/api/history")){
           const url = new URL(apiUrl(path));
@@ -2470,7 +2714,7 @@ function formatTimeSecondParts(iso){
           if(!["consume","restock"].includes(type)) throw new Error("invalid type");
           deleteGuestRecordGroup(gid, type);
           saveGuest();
-          return {ok:true};
+          return {ok:true, criticalThreshold: CRITICAL_THRESHOLD};
         }
 
         if(path==="/api/adjust"){
@@ -2534,10 +2778,9 @@ function formatTimeSecondParts(iso){
 
         if(path==="/api/settings"){
           // 虽然未登录隐藏设置，但仍可写入本地（避免其他地方调用报错）
-          REMIND_THRESHOLD = Number(data?.remindThreshold ?? REMIND_THRESHOLD) || REMIND_THRESHOLD;
           CRITICAL_THRESHOLD = Number(data?.criticalThreshold ?? CRITICAL_THRESHOLD) || CRITICAL_THRESHOLD;
           saveGuest();
-          return {ok:true};
+          return {ok:true, criticalThreshold: CRITICAL_THRESHOLD};
         }
         if(path==="/api/addColor"){
 	          const code = String(data?.code||"").trim().toUpperCase();
@@ -2720,39 +2963,31 @@ function toast(message,type="success"){
     }
 
     function renderAlerts(){
-      const ltRemind=[],ltCritical=[];
+      const ltCritical=[];
       Object.keys(COLORS).forEach(code=>{
         const remain=INVENTORY[code]??0;
-        if(remain<REMIND_THRESHOLD) ltRemind.push(code);
         if(remain<CRITICAL_THRESHOLD) ltCritical.push(code);
       });
-      ltRemind.sort(sortCodes);
       ltCritical.sort(sortCodes);
 
-      const list500=document.getElementById("listLt500");
       const list300=document.getElementById("listLt300");
-      list500.innerHTML="";list300.innerHTML="";
-      if(ltRemind.length===0) list500.innerHTML='<span class="empty">暂无</span>';
-      else ltRemind.forEach(c=>list500.appendChild(buildPill(c)));
-      if(ltCritical.length===0) list300.innerHTML='<span class="empty">暂无</span>';
-      else ltCritical.forEach(c=>list300.appendChild(buildPill(c)));
-      document.getElementById("countLt500").textContent=ltRemind.length;
-      document.getElementById("countLt300").textContent=ltCritical.length;
-      // 仅当存在不足提醒时展示区域；单档位为空则隐藏该档位
-      const panel=document.getElementById("alertsPanel");
-      const cardRemind=list500.closest(".alert-card");
-      const cardCritical=list300.closest(".alert-card");
-      if(cardRemind) cardRemind.style.display = ltRemind.length>0 ? "" : "none";
-      if(cardCritical) cardCritical.style.display = ltCritical.length>0 ? "" : "none";
-      panel.style.display = (ltRemind.length===0 && ltCritical.length===0) ? "none" : "";
+      if(list300){
+        list300.innerHTML="";
+        if(ltCritical.length===0) list300.innerHTML='<span class="empty">暂无</span>';
+        else ltCritical.forEach(c=>list300.appendChild(buildPill(c)));
+      }
 
+      const countEl=document.getElementById("countLt300");
+      if(countEl) countEl.textContent = `色号数量：${ltCritical.length}`;
+
+      const panel=document.getElementById("alertsPanel");
+      if(panel) panel.style.display = (ltCritical.length===0) ? "none" : "";
     }
 
     function renderMeta(){
       const {count,tight,sum}=computeStats();
       document.getElementById("metaTotal").textContent=`色号数量：${count} · 总库存：${sum}`;
-      document.getElementById("metaTight").textContent=`库存紧张（<${CRITICAL_THRESHOLD}）：${tight}`;
-    }
+      }
 
 
     function iosIcon(name){
@@ -2808,17 +3043,8 @@ function toast(message,type="success"){
     function renderInventoryGrid(){
       const grid=document.getElementById("inventoryGrid");
       grid.innerHTML="";
-      const search=document.getElementById("searchCode").value.trim().toUpperCase();
-      const lessRaw=document.getElementById("filterLessThan").value;
-      const lessThan=lessRaw===""?null:Number(lessRaw);
-
       const codes=Object.keys(COLORS).sort(sortCodes);
-      const filtered=codes.filter(code=>{
-        if(search && !code.includes(search)) return false;
-        const remain=INVENTORY[code]??0;
-        if(lessThan!==null && !Number.isNaN(lessThan)) return remain<lessThan;
-        return true;
-      });
+      const filtered=codes.slice();
 
       const cmp=(a,b)=>{
         if(!SORT_MODE) return sortCodes(a,b);
@@ -2831,20 +3057,7 @@ function toast(message,type="success"){
 
       const buildCard=(code)=>{
         const remain=INVENTORY[code]??0;
-        const card=document.createElement("div");
-        card.className="card"+(remain<0?" debt":"");
-
-        const codeEl=document.createElement("div");
-        codeEl.className="code";
-        codeEl.textContent=code;
-
-        const sw=document.createElement("div");
-        sw.className="color-block";
-        sw.style.background=COLORS[code]||"#777";
-
-        const remainEl=document.createElement("div");
-        remainEl.className="remain"+(remain<0?" debt":"");
-        remainEl.innerHTML=`${remain}<small>粒</small>`;
+        const hex=COLORS[code]||"#777";
 
         const status=document.createElement("span");
         let statusClass="ok",statusText="库存充足";
@@ -2852,6 +3065,106 @@ function toast(message,type="success"){
         else if(remain<CRITICAL_THRESHOLD){statusClass="warn";statusText="库存紧张";}
         status.className="status "+statusClass;
         status.textContent=statusText;
+
+        const card=document.createElement("div");
+        card.className="card"+(remain<0?" debt":"")+(VIEW_MODE==="compact"?" compact":"");
+
+        const codeEl=document.createElement("div");
+        codeEl.className="code";
+        codeEl.textContent=code;
+
+        // —— 紧凑布局：头部（色号+标签+更多） + 下方色块数量 —— 
+        if(VIEW_MODE==="compact"){
+          const top=document.createElement("div");
+          top.className="card-top";
+
+          const spacer=document.createElement("div");
+          spacer.className="spacer";
+
+          const moreBtn=document.createElement("button");
+          moreBtn.type="button";
+          moreBtn.className="icon-btn card-more-btn";
+          moreBtn.setAttribute("aria-label","更多操作");
+          moreBtn.textContent="⋯";
+
+          const menu=document.createElement("div");
+          menu.className="card-menu";
+          menu.hidden=true;
+
+          const adjustItem=document.createElement("button");
+          adjustItem.type="button";
+          adjustItem.className="menu-item";
+          adjustItem.textContent="调整库存";
+          adjustItem.addEventListener("click",(e)=>{
+            e.stopPropagation();
+            closeCardMenu();
+            openAdjust(code);
+          });
+
+          const detailItem=document.createElement("button");
+          detailItem.type="button";
+          detailItem.className="menu-item";
+          detailItem.textContent="查看明细";
+          detailItem.addEventListener("click",(e)=>{
+            e.stopPropagation();
+            closeCardMenu();
+            openDetail(code);
+          });
+
+          menu.appendChild(adjustItem);
+          menu.appendChild(detailItem);
+
+          moreBtn.addEventListener("click",(e)=>{
+            e.stopPropagation();
+
+            // 关闭其他卡片的菜单
+            if(OPEN_CARD_MENU && OPEN_CARD_MENU!==menu){
+              OPEN_CARD_MENU.hidden=true;
+            }
+            const willOpen = menu.hidden;
+
+            closeCardMenu();
+            if(willOpen){
+              menu.hidden=false;
+              OPEN_CARD_MENU=menu;
+            }
+          });
+
+          const block=document.createElement("div");
+          block.className="compact-block";
+          block.style.backgroundColor=hex;
+
+          const remainEl=document.createElement("div");
+          remainEl.className="compact-remain"+(remain<0?" debt":"");
+          remainEl.innerHTML=`${remain}<small>粒</small>`;
+
+          // 数字颜色：根据色块背景自动取对比色，避免看不清
+          if(remain>=0){
+            remainEl.style.color = contrastTextColor(hex);
+          }
+
+          block.appendChild(remainEl);
+
+          top.appendChild(codeEl);
+          top.appendChild(status);
+          top.appendChild(spacer);
+          top.appendChild(moreBtn);
+
+          card.appendChild(top);
+          card.appendChild(block);
+          card.appendChild(menu);
+
+          return card;
+        }
+
+        // —— 标准布局（原样保留） —— 
+        const sw=document.createElement("div");
+        sw.className="color-block";
+        sw.style.background=hex;
+
+        const remainEl=document.createElement("div");
+        remainEl.className="remain"+(remain<0?" debt":"");
+        remainEl.innerHTML=`${remain}<small>粒</small>`;
 
         const actions=document.createElement("div");
         actions.className="card-actions";
@@ -2876,8 +3189,9 @@ function toast(message,type="success"){
         return card;
       };
 
-      // ✅ 当使用筛选/排序时：取消系列分区，按整体结果展示；恢复默认排序且无筛选时：再按系列分区
-      const isDefaultView = (!SORT_MODE) && (!search) && (lessThan===null || Number.isNaN(lessThan));
+      // ✅ 仅当“默认排序”时按系列分区展示；使用余量排序（升/降）时按整体结果展示
+      // （已移除：搜索色号/余量小于筛选）
+      const isDefaultView = (!SORT_MODE);
       LAST_IS_DEFAULT_VIEW = isDefaultView;
       const all = filtered.slice().sort(cmp);
 
@@ -2998,20 +3312,16 @@ function toast(message,type="success"){
     }
 
     function updateThresholdUI(){
-      const labelRemind=document.getElementById("labelRemindThreshold");
       const labelCritical=document.getElementById("labelCriticalThreshold");
-      if(labelRemind) labelRemind.textContent=REMIND_THRESHOLD;
-      if(labelCritical) labelCritical.textContent=CRITICAL_THRESHOLD;    }
+      if(labelCritical) labelCritical.textContent=CRITICAL_THRESHOLD;
+    }
 
     async function loadSettings(){
       try{
         const res=await apiGet("/api/settings");
-        const rt=Number(res.remindThreshold);
         const ct=Number(res.criticalThreshold);
-        if(Number.isFinite(rt)&&rt>0) REMIND_THRESHOLD=rt;
         if(Number.isFinite(ct)&&ct>0) CRITICAL_THRESHOLD=ct;
-        if(REMIND_THRESHOLD<CRITICAL_THRESHOLD) CRITICAL_THRESHOLD=REMIND_THRESHOLD;
-      }catch{}
+}catch{}
       updateThresholdUI();
     }
 
@@ -3897,34 +4207,9 @@ function toast(message,type="success"){
       }
     });
 
-    // 筛选
-    const searchInput=document.getElementById("searchCode");
-    const lessInput=document.getElementById("filterLessThan");
-    searchInput.addEventListener("input",renderInventoryGrid);
-    lessInput.addEventListener("input",renderInventoryGrid);
-    // 余量排序按钮（再次点击取消，恢复默认：按色号排序）
-const btnSortAsc = document.getElementById("btnSortAsc");
-const btnSortDesc = document.getElementById("btnSortDesc");
-function refreshSortUI(){
-  if(btnSortAsc) btnSortAsc.classList.toggle("active", SORT_MODE==="asc");
-  if(btnSortDesc) btnSortDesc.classList.toggle("active", SORT_MODE==="desc");
-}
-if(btnSortAsc) btnSortAsc.addEventListener("click", ()=>{
-  SORT_MODE = (SORT_MODE==="asc") ? null : "asc";
-  refreshSortUI();
-  renderInventoryGrid();
-});
-if(btnSortDesc) btnSortDesc.addEventListener("click", ()=>{
-  SORT_MODE = (SORT_MODE==="desc") ? null : "desc";
-  refreshSortUI();
-  renderInventoryGrid();
-});
-refreshSortUI();
-document.getElementById("btnClearFilter").addEventListener("click",()=>{
-      searchInput.value="";lessInput.value="";renderInventoryGrid();
-    });
+    // 筛选/搜索已移除
 
-    // 导出 CSV
+// 导出 CSV
     function downloadCsv(filename,text){
       const blob=new Blob([text],{type:"text/csv;charset=utf-8;"});
       const url=URL.createObjectURL(blob);
@@ -3978,8 +4263,7 @@ document.getElementById("btnClearFilter").addEventListener("click",()=>{
 
         // 设置 + 添加色号（tab）
     const settingsDialog=document.getElementById("settingsDialog");
-    const remindInput=document.getElementById("remindInput");
-    const criticalInput=document.getElementById("criticalInput");
+const criticalInput=document.getElementById("criticalInput");
     const seriesListEl=document.getElementById("seriesList");
 	    const addCodeInput=document.getElementById("addCodeInput");
 	    const addCodeSubmit=document.getElementById("addCodeSubmit");
@@ -4070,8 +4354,7 @@ document.getElementById("btnClearFilter").addEventListener("click",()=>{
     });
 
     document.getElementById("btnSettings").addEventListener("click",()=>{
-      remindInput.value=REMIND_THRESHOLD;
-      criticalInput.value=CRITICAL_THRESHOLD;
+criticalInput.value=CRITICAL_THRESHOLD;
       setSettingsTab("threshold");
       openDialog(settingsDialog);
     });
@@ -4104,21 +4387,18 @@ document.getElementById("btnClearFilter").addEventListener("click",()=>{
     settingsPrimaryBtn.addEventListener("click",async()=>{
       if(settingsTabState.active!=="threshold") return;
 
-      const remind=Number(remindInput.value);
       const critical=Number(criticalInput.value);
-      if(!Number.isInteger(remind)||remind<=0){toast("提醒数量必须为正整数","error");return;}
-      if(!Number.isInteger(critical)||critical<=0){toast("告急数量必须为正整数","error");return;}
-      if(remind<critical){toast("提醒数量应大于或等于告急数量","error");return;}
+      if(!Number.isInteger(critical)||critical<=0){toast("数量必须为正整数","error");return;}
+
       try{
-        const res=await apiPost("/api/settings",{remindThreshold:remind,criticalThreshold:critical});
-        REMIND_THRESHOLD=res.remindThreshold;
-        CRITICAL_THRESHOLD=res.criticalThreshold;
+        const res=await apiPost("/api/settings",{criticalThreshold:critical});
+        CRITICAL_THRESHOLD = Number(res.criticalThreshold ?? critical) || critical;
         updateThresholdUI();
         renderAll();
-        settingsDialog.close();
-        toast("已保存提醒设置","success");
+        toast("已保存","success");
       }catch(e){
-        toast(e.message||"保存失败","error");
+        console.error(e);
+        toast("保存失败","error");
       }
     });
 
@@ -4474,6 +4754,7 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
     
     async function bootstrap(){
       setAuthUI();
+      bindSortAndViewToggles();
     // ====== Guest tip ======
       const guestTipDialog = document.getElementById("guestTipDialog");
       const guestTipOk = document.getElementById("guestTipOk");
