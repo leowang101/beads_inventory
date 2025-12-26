@@ -661,7 +661,7 @@ app.post("/api/register", async (req, res) => {
 
     const [cntRows] = await safeQuery("SELECT COUNT(*) as c FROM users", []);
     const cnt = Number(cntRows?.[0]?.c || 0);
-    if (cnt >= 200) return sendJson(res, 400, { ok: false, message: "账号注册数量达到上限。" });
+    if (cnt >= 300) return sendJson(res, 400, { ok: false, message: "账号注册数量达到上限。" });
 
     const salt = newSalt();
     const pwdHash = hashPassword(password, salt);
