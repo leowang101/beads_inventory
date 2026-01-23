@@ -1321,13 +1321,27 @@ body.theme-light #recordsDialog .check .switch{
 
 /* 桌面/平板默认列宽 */
 #recordsDialog .records-consume .records-row{grid-template-columns:170px 1fr 90px 130px;}
-#recordsDialog .records-restock .records-row{grid-template-columns:170px 90px 130px;}
+#recordsDialog .records-restock .records-row{grid-template-columns:170px 90px 1fr;}
+
+/* 补充记录：操作列靠右 */
+#recordsDialog .records-restock .records-row .op,
+#recordsDialog .records-restock .records-row.records-head .op{
+  justify-self:end;
+  text-align:right;
+}
+
+/* 消耗记录：操作列靠右 */
+#recordsDialog .records-consume .records-row .op,
+#recordsDialog .records-consume .records-row.records-head .op{
+  justify-self:end;
+  text-align:right;
+}
 
 /* 移动端：压缩时间/总数列，给图纸名称更多空间，确保两个操作按钮都在屏内 */
 @media (max-width: 560px){
   #recordsDialog .records-row{gap:8px; padding:9px 0;}
   #recordsDialog .records-consume .records-row{grid-template-columns:85px minmax(0,1fr) 48px 70px;}
-  #recordsDialog .records-restock .records-row{grid-template-columns:120px minmax(0,1fr) 120px;}
+  #recordsDialog .records-restock .records-row{grid-template-columns:120px 70px 1fr;}
 
   /* 时间两行：日期+时间（含秒）；图纸名称可换行 */
   #recordsDialog .records-row .time{
@@ -1348,10 +1362,30 @@ body.theme-light #recordsDialog .check .switch{
   #recordsDialog .records-row .op{
     display:flex;
     justify-content:flex-start;
-    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:6px 10px;
     text-align:left;
+    white-space:normal;
+    min-width:0;
   }
   #recordsDialog .records-row .op .link-action{margin-left:0;}
+
+  /* 补充记录：操作列在右侧 */
+  #recordsDialog .records-restock .records-row .op,
+  #recordsDialog .records-restock .records-row.records-head .op{
+    justify-content:flex-end;
+    justify-self:end;
+    text-align:right;
+  }
+
+  /* 消耗记录：操作列在右侧 */
+  #recordsDialog .records-consume .records-row .op,
+  #recordsDialog .records-consume .records-row.records-head .op{
+    justify-content:flex-end;
+    justify-self:end;
+    text-align:right;
+  }
 }
 
 #recordsDialog .link-action{border:none;background:transparent;padding:0;cursor:pointer;color:var(--accent);font-size:12px;}
@@ -1378,7 +1412,7 @@ body.theme-light #recordsDialog .check .switch{
   padding:10px 0;
   border-bottom:1px solid var(--border);
   font-size:12px;
-  grid-template-columns:60px 1fr 90px;
+  grid-template-columns:60px 1fr 80px 90px;
 }
 #recordsDialog .stats-row.stats-head{
   padding-top:2px;
@@ -1411,7 +1445,7 @@ body.theme-light #recordsDialog .check .switch{
   #recordsDialog .record-pill{gap:8px; padding:7px 8px; border-radius:11px;}
   #recordsDialog .record-dot{width:14px; height:14px;}
   #recordsDialog .record-pill-text{font-size:12px;}
-  #recordsDialog .stats-row{grid-template-columns:46px minmax(0,1fr) 70px;}
+  #recordsDialog .stats-row{grid-template-columns:46px minmax(0,1fr) 60px 60px;}
 }
 
 
@@ -2043,6 +2077,7 @@ body.theme-light #recordsDialog .check .switch{
                   <div>排名</div>
                   <div>色号</div>
                   <div class="num">消耗</div>
+                  <div class="num">当前库存</div>
                 </div>
                 <div id="recordsStatsList" class="stats-list"></div>
                 <div class="empty" id="recordsStatsEmpty" style="display:none;">暂无消耗</div>
@@ -4901,9 +4936,15 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
         cQty.className = "num";
         cQty.textContent = String(it.qty);
 
+        const cRemain = document.createElement("div");
+        cRemain.className = "num";
+        const remain = Number(INVENTORY?.[it.code] ?? 0);
+        cRemain.textContent = Number.isFinite(remain) ? String(remain) : "0";
+
         row.appendChild(cRank);
         row.appendChild(cCode);
         row.appendChild(cQty);
+        row.appendChild(cRemain);
         listEl.appendChild(row);
       });
     }
