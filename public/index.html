@@ -1723,13 +1723,24 @@ body.theme-light #recordsDialog .check .switch{
 
     .settings-actions{
       display:flex;
-      justify-content:center;
-      padding-top:8px;
+      justify-content:flex-end;
     }
     .settings-actions .btn-primary{
-      min-width: 220px;
-      padding: 12px 18px;
-      border-radius: 14px;
+      min-width: 90px;
+      padding: 10px 16px;
+      height: 36px;
+      border-radius: 10px;
+    }
+    .inline-field{
+      display:flex;
+      align-items:stretch;
+      gap:12px;
+    }
+    .inline-field input{
+      height: 36px;
+    }
+    .inline-field .settings-actions{
+      padding-top:0;
     }
     .account-actions{
       display:flex;
@@ -2072,10 +2083,27 @@ body.theme-light #recordsDialog .check .switch{
         </div>
         <div class="modal-field">
           <label for="criticalInput">提醒数量（默认 300）余量低于该值时会出现在“库存提醒”的列表，并标记为库存紧张</label>
-          <input type="number" id="criticalInput" min="1" step="1" />
+          <div class="inline-field">
+            <input type="number" id="criticalInput" min="1" step="1" />
+            <div class="settings-actions">
+              <button class="btn-primary" id="settingsPrimary">保存</button>
+            </div>
+          </div>
         </div>
-        <div class="settings-actions">
-          <button class="btn-primary" id="settingsPrimary">保存库存提醒</button>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <h2>添加色号</h2>
+        </div>
+        <div class="modal-field">
+          <label for="addCodeInput">可添加MARD色号，默认库存为0</label>
+          <div class="inline-field">
+            <input id="addCodeInput" type="text" maxlength="6" placeholder="例如 A1 / F11" />
+            <div class="settings-actions">
+              <button id="addCodeSubmit" class="btn-primary" type="button">保存</button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -2086,19 +2114,6 @@ body.theme-light #recordsDialog .check .switch{
         <div class="modal-field">
           <label>添加/删除非标准色系</label>
           <div id="seriesList" class="series-list"></div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-title">
-          <h2>添加色号</h2>
-        </div>
-        <div class="modal-field">
-          <label for="addCodeInput">可添加MARD色号，默认库存为0</label>
-          <input id="addCodeInput" type="text" maxlength="6" placeholder="例如 A1 / F11" />
-        </div>
-        <div class="settings-actions">
-          <button id="addCodeSubmit" class="btn-primary" type="button">确认添加</button>
         </div>
       </section>
 
