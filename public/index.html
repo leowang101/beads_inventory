@@ -265,7 +265,10 @@ body.theme-light .float-nav .icon-btn{
 .sort-group{ display:flex; gap:10px; align-items:center;
   flex: 1 1 auto;
   min-width: 0;
+  overflow-x:auto;
+  -webkit-overflow-scrolling: touch;
 }
+.sort-group::-webkit-scrollbar{ display:none; }
 .btn-sort{
   padding:10px 12px;
   border-radius:12px;
@@ -284,15 +287,17 @@ body.theme-light .float-nav .icon-btn{
 .sort-row{
   display:flex;
   align-items:center;
-  justify-content:flex-start;
+  justify-content:space-between;
   gap:12px;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;
   width:100%;
 }
 
 .view-toggle{
-    margin-left:auto;
-display:inline-flex;
+  margin-left:auto;
+  display:inline-flex;
+  flex:0 0 auto;
+  flex-shrink:0;
   border:1px solid var(--border);
   border-radius:999px;
   overflow:hidden;
@@ -303,12 +308,15 @@ body.theme-light .view-toggle{ background: rgba(15,23,42,.04); }
 .view-toggle .view-tab{
   border:0;
   background: transparent;
-  padding:10px 16px;
+  padding:9px 14px;
   border-radius:0;
   font-size:12px;
   cursor:pointer;
   white-space:nowrap;
   transform:none !important;
+}
+.view-toggle .view-tab{
+  min-width:56px;
 }
 .view-toggle .view-tab:hover{ border-color: transparent; }
 .view-toggle .view-tab.active{
@@ -1434,26 +1442,10 @@ body.theme-light #recordsDialog .check .switch{
     flex: 0 0 auto;
     margin-left: 8px;   /* ✅ 确保与排序按钮有间距 */
   }
-
-  /* tab 更精致 */
-  .view-toggle .view-tab{
-    padding: 7px 12px;
-    font-size: 11px;
-  }
 }
 
 
 .sort-row::-webkit-scrollbar{ display:none; }
-
-  .view-toggle{ margin-left: auto; }
-  .view-toggle .view-tab{
-    padding: 7px 12px;
-    font-size: 11px;
-  }
-}
-
-
-.sort-row .view-toggle{ margin-left:auto !important; }
 
     :root{
       --bg:#0b1113;
@@ -1806,10 +1798,6 @@ body.theme-light #recordsDialog .check .switch{
                 <button class="btn-sort" id="btnSortDesc">由多到少</button>
               </div>
 
-              <div class="view-toggle" role="tablist" aria-label="布局切换">
-                <button type="button" class="view-tab active" id="btnViewStandard" data-view="standard">标准</button>
-                <button type="button" class="view-tab" id="btnViewCompact" data-view="compact">紧凑</button>
-              </div>
             </div>
           </div>
         </div>
@@ -2273,7 +2261,7 @@ body.theme-light #recordsDialog .check .switch{
       <div class="guest-tip-text">
         <p>1.未登录状态下数据仅保存在本地，如需保存至云端请登录后使用</p>
         <p>2.工具还在早期开发阶段，仅开放少量试用名额，若无法注册请耐心等待</p>
-        <p>3.本项目纯属为爱发电，服务器和带宽成本由作者本人承担，请定期使用导出功能备份数据，作者不承担数据丢失导致的任何后果</p>
+        <p>3.本项目纯属为爱发电，服务器、带宽、AI成本由作者本人承担，请定期使用导出功能备份数据，作者不承担数据丢失导致的任何后果</p>
       </div>
       <div class="modal-actions" style="margin-top:14px;">
         <button class="btn-primary" id="guestTipOk">我知道了</button>
@@ -2357,38 +2345,13 @@ const API_BASE = window.location.origin;
     let CRITICAL_THRESHOLD = 300;
     let SORT_MODE = null; // null | 'asc' | 'desc'
 
-    // ====== View Mode (标准/紧凑) ======
-    const VIEW_MODE_KEY = "beads_view_mode_v1";
-    let VIEW_MODE = localStorage.getItem(VIEW_MODE_KEY) || "standard"; // "standard" | "compact"
-    // 用于 CSS/调试（不影响逻辑）
+    // ====== View Mode (固定紧凑) ======
+    let VIEW_MODE = "compact";
     document.body.dataset.view = VIEW_MODE;
 
     function bindSortAndViewToggles(){
       const btnAsc = document.getElementById("btnSortAsc");
       const btnDesc = document.getElementById("btnSortDesc");
-      const btnStd = document.getElementById("btnViewStandard");
-      const btnCmp = document.getElementById("btnViewCompact");
-
-      // --- view mode ---
-      const syncViewUI = ()=>{
-        if(btnStd) btnStd.classList.toggle("active", VIEW_MODE==="standard");
-        if(btnCmp) btnCmp.classList.toggle("active", VIEW_MODE==="compact");
-      };
-      const setViewMode = (mode)=>{
-        if(mode!=="standard" && mode!=="compact") return;
-        VIEW_MODE = mode;
-        try{ localStorage.setItem(VIEW_MODE_KEY, VIEW_MODE); }catch{}
-        document.body.dataset.view = VIEW_MODE;
-        syncViewUI();
-        // 实时刷新列表
-        try{ renderInventoryGrid(); }catch{}
-      };
-
-      if(btnStd) btnStd.addEventListener("click", ()=>setViewMode("standard"));
-      if(btnCmp) btnCmp.addEventListener("click", ()=>setViewMode("compact"));
-      // 初始化一次（读取 localStorage 后同步 UI）
-      syncViewUI();
-
       // --- sort mode ---
       const syncSortUI = ()=>{
         if(btnAsc) btnAsc.classList.toggle("active", SORT_MODE==="asc");
