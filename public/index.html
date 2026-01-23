@@ -1357,6 +1357,45 @@ body.theme-light #recordsDialog .check .switch{
 #recordsDialog .record-dot{width:12px;height:12px;border-radius:999px;border:1px solid rgba(255,255,255,.15);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);flex:0 0 auto;}
 #recordsDialog .record-pill-text{font-weight:400;font-variant-numeric:tabular-nums;color:var(--text);}
 
+/* 消耗统计列表 */
+#recordsDialog .records-toolbar.stats-toolbar{
+  justify-content:flex-start;
+  flex-wrap:wrap;
+}
+#recordsDialog .stats-table{margin-top:4px;}
+#recordsDialog .stats-row{
+  display:grid;
+  align-items:center;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid var(--border);
+  font-size:12px;
+  grid-template-columns:60px 1fr 90px;
+}
+#recordsDialog .stats-row.stats-head{
+  padding-top:2px;
+  padding-bottom:8px;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:600;
+  border-bottom:1px solid var(--border);
+}
+#recordsDialog .stats-row.stats-head > div{white-space:nowrap;}
+#recordsDialog .stats-row .num{font-variant-numeric:tabular-nums;}
+#recordsDialog .stats-code{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+#recordsDialog .stats-dot{
+  width:12px;
+  height:12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.15);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);
+  flex:0 0 auto;
+}
+
 @media (max-width: 560px){
   #recordsDialog .record-detail{padding:8px 0 12px;}
   #recordsDialog .record-pill-wrap{padding:10px 10px; border-radius:12px;}
@@ -1364,6 +1403,7 @@ body.theme-light #recordsDialog .check .switch{
   #recordsDialog .record-pill{gap:8px; padding:7px 8px; border-radius:11px;}
   #recordsDialog .record-dot{width:14px; height:14px;}
   #recordsDialog .record-pill-text{font-size:12px;}
+  #recordsDialog .stats-row{grid-template-columns:46px minmax(0,1fr) 70px;}
 }
 
 
@@ -1587,6 +1627,7 @@ body.theme-light #recordsDialog .check .switch{
         <div class="tab-nav">
           <button type="button" class="tab-btn active" data-tab="records-consume">消耗记录</button>
           <button type="button" class="tab-btn" data-tab="records-restock">补充记录</button>
+          <button type="button" class="tab-btn" data-tab="records-stats">消耗统计</button>
         </div>
 
         <div class="tab-panel active" id="recordsConsumePanel">
@@ -1620,6 +1661,22 @@ body.theme-light #recordsDialog .check .switch{
             </div>
             <div id="recordsRestockList" class="records-list"></div>
             <div class="empty" id="recordsRestockEmpty" style="display:none;">暂无记录</div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="recordsStatsPanel">
+          <div class="records-toolbar stats-toolbar">
+            <span class="meta-chip" id="recordsStatsTotalChip">总消耗：0</span>
+            <span class="meta-chip" id="recordsStatsCountChip">消耗色号：0</span>
+          </div>
+          <div class="stats-table">
+            <div class="stats-row stats-head">
+              <div>排名</div>
+              <div>色号</div>
+              <div class="num">消耗</div>
+            </div>
+            <div id="recordsStatsList" class="stats-list"></div>
+            <div class="empty" id="recordsStatsEmpty" style="display:none;">暂无消耗</div>
           </div>
         </div>
       </div>
@@ -2646,6 +2703,24 @@ function formatTimeSecondParts(iso){
           const gid = String(url.searchParams.get("gid")||"");
           const type = String(url.searchParams.get("type")||"").toLowerCase();
           const data = getGuestRecordGroupDetail(gid, type);
+          return {ok:true, data};
+        }
+        if(path.startsWith("/api/consumeStats")){
+          const by = new Map();
+          for(const h of (GUEST_HISTORY||[])){
+            if(String(h?.type||"").toLowerCase() !== "consume") continue;
+            const code = String(h?.code||"").toUpperCase();
+            const qty = Number(h?.qty||0) || 0;
+            if(!code || qty<=0) continue;
+            by.set(code, (by.get(code)||0) + qty);
+          }
+          const data = Array.from(by.entries()).map(([code, qty])=>({
+            code,
+            qty,
+            hex: COLORS[code] || MASTER_HEX[code] || "#777777"
+          }))
+            .filter(x=>x.qty>0)
+            .sort((a,b)=> (b.qty-a.qty) || sortCodes(String(a.code||""), String(b.code||"")));
           return {ok:true, data};
         }
 
@@ -4435,6 +4510,10 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
     const recordsRestockList = document.getElementById("recordsRestockList");
     const recordsConsumeEmpty = document.getElementById("recordsConsumeEmpty");
     const recordsRestockEmpty = document.getElementById("recordsRestockEmpty");
+    const recordsStatsList = document.getElementById("recordsStatsList");
+    const recordsStatsEmpty = document.getElementById("recordsStatsEmpty");
+    const recordsStatsTotalChip = document.getElementById("recordsStatsTotalChip");
+    const recordsStatsCountChip = document.getElementById("recordsStatsCountChip");
 
     const RECORDS_STATE = {
       active: "consume",
@@ -4446,7 +4525,7 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
     function _recKey(type,gid){ return `${type}|${gid}`; }
 
     function setRecordsTab(type){
-      type = type==="restock" ? "restock" : "consume";
+      type = (type==="restock" || type==="stats") ? type : "consume";
       RECORDS_STATE.active = type;
 
       document.querySelectorAll("#recordsDialog .tab-nav .tab-btn").forEach(btn=>{
@@ -4454,18 +4533,22 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       });
       const consumePanel = document.getElementById("recordsConsumePanel");
       const restockPanel = document.getElementById("recordsRestockPanel");
+      const statsPanel = document.getElementById("recordsStatsPanel");
       if(consumePanel) consumePanel.classList.toggle("active", type==="consume");
       if(restockPanel) restockPanel.classList.toggle("active", type==="restock");
+      if(statsPanel) statsPanel.classList.toggle("active", type==="stats");
 
       // checkbox only for consume
       const toolbar = recordsOnlyWithPattern ? recordsOnlyWithPattern.closest(".records-toolbar") : null;
       if(toolbar) toolbar.style.display = type==="consume" ? "" : "none";
 
-      loadAndRenderRecordGroups();
+      if(type==="stats") loadAndRenderConsumeStats();
+      else loadAndRenderRecordGroups();
     }
 
     async function loadAndRenderRecordGroups(){
       const type = RECORDS_STATE.active;
+      if(type==="stats") return;
       const only = !!(recordsOnlyWithPattern && recordsOnlyWithPattern.checked) && type==="consume";
       try{
         const res = await apiGet(`/api/recordGroups?type=${encodeURIComponent(type)}${only ? "&onlyWithPattern=1" : ""}`);
@@ -4474,6 +4557,70 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       }catch(e){
         toast(e?.message || "加载记录失败","error");
       }
+    }
+
+    async function loadAndRenderConsumeStats(){
+      try{
+        const res = await apiGet("/api/consumeStats");
+        const items = Array.isArray(res.data) ? res.data : [];
+        renderConsumeStats(items);
+      }catch(e){
+        toast(e?.message || "加载统计失败","error");
+      }
+    }
+
+    function renderConsumeStats(items){
+      const listEl = recordsStatsList;
+      const emptyEl = recordsStatsEmpty;
+      if(!listEl || !emptyEl) return;
+
+      const normalized = (items||[]).map(it=>{
+        const code = String(it?.code || "").toUpperCase();
+        const qty = Number(it?.qty ?? it?.total ?? it?.consume ?? 0) || 0;
+        if(!code || qty<=0) return null;
+        const hex = COLORS[code] || MASTER_HEX[code] || it?.hex || "#777777";
+        return {code, qty, hex};
+      }).filter(Boolean)
+        .sort((a,b)=> (b.qty-a.qty) || sortCodes(a.code, b.code));
+
+      const total = normalized.reduce((acc, it)=> acc + (Number(it.qty)||0), 0);
+      if(recordsStatsTotalChip) recordsStatsTotalChip.textContent = `总消耗：${total}`;
+      if(recordsStatsCountChip) recordsStatsCountChip.textContent = `消耗色号：${normalized.length}`;
+
+      listEl.innerHTML = "";
+      if(normalized.length===0){
+        emptyEl.style.display="block";
+        return;
+      }
+      emptyEl.style.display="none";
+
+      normalized.forEach((it, idx)=>{
+        const row = document.createElement("div");
+        row.className = "stats-row";
+
+        const cRank = document.createElement("div");
+        cRank.className = "num";
+        cRank.textContent = String(idx + 1);
+
+        const cCode = document.createElement("div");
+        cCode.className = "stats-code";
+        const dot = document.createElement("span");
+        dot.className = "stats-dot";
+        dot.style.background = it.hex || "#777777";
+        const txt = document.createElement("span");
+        txt.textContent = it.code;
+        cCode.appendChild(dot);
+        cCode.appendChild(txt);
+
+        const cQty = document.createElement("div");
+        cQty.className = "num";
+        cQty.textContent = String(it.qty);
+
+        row.appendChild(cRank);
+        row.appendChild(cCode);
+        row.appendChild(cQty);
+        listEl.appendChild(row);
+      });
     }
 
     function renderRecordGroups(type, groups){
@@ -4676,7 +4823,9 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
     document.querySelectorAll("#recordsDialog .tab-nav .tab-btn").forEach(btn=>{
       btn.addEventListener("click", ()=>{
         const tab = String(btn.dataset.tab||"");
-        setRecordsTab(tab==="records-restock" ? "restock" : "consume");
+        if(tab==="records-restock") setRecordsTab("restock");
+        else if(tab==="records-stats") setRecordsTab("stats");
+        else setRecordsTab("consume");
       });
     });
     if(recordsOnlyWithPattern){

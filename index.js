@@ -661,7 +661,7 @@ app.post("/api/register", async (req, res) => {
 
     const [cntRows] = await safeQuery("SELECT COUNT(*) as c FROM users", []);
     const cnt = Number(cntRows?.[0]?.c || 0);
-    if (cnt >= 500) return sendJson(res, 400, { ok: false, message: "账号注册数量达到上限。" });
+    if (cnt >= 1000) return sendJson(res, 400, { ok: false, message: "账号注册数量达到上限。" });
 
     const salt = newSalt();
     const pwdHash = hashPassword(password, salt);
@@ -1095,6 +1095,26 @@ app.get("/api/history", requireAuth, async (req, res) => {
       data: rows,
       buildTag: BUILD_TAG,
     });
+  } catch (e) {
+    sendJson(res, 500, { ok: false, message: e.message });
+  }
+});
+
+// 消耗统计：按色号汇总消耗数量（仅展示消耗>0）
+app.get("/api/consumeStats", requireAuth, async (req, res) => {
+  try {
+    const [rows] = await safeQuery(
+      `SELECT h.code, SUM(h.qty) AS qty, p.hex
+       FROM user_history h
+       LEFT JOIN palette p ON p.code=h.code
+       WHERE h.user_id=? AND h.htype='consume'
+       GROUP BY h.code
+       HAVING SUM(h.qty) > 0
+       ORDER BY qty DESC, h.code ASC`,
+      [req.user.id]
+    );
+
+    sendJson(res, 200, { ok: true, data: rows, buildTag: BUILD_TAG });
   } catch (e) {
     sendJson(res, 500, { ok: false, message: e.message });
   }
