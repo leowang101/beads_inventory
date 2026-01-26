@@ -962,23 +962,32 @@ main{
   #recordDeleteDialog{ width: min(520px, 86vw); }
   #recordDeleteDialog .modal-foot{ gap: 12px; }
   #recordDeleteDialog .modal-foot button{ min-width: 0; flex: 1 1 0; }
+  #recordEditDialog{ width: min(680px, 92vw); }
 
 
-  dialog[open]{
-    position: fixed;
-    top: 50%;
-    left: 50%;
+  dialog{
+    position:fixed;
+    top:50%;
+    left:50%;
     transform: translate(-50%, -50%);
     z-index: 9001;
     margin: 0;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow: hidden;
   }
-
-  /* Ensure all dialogs above backdrop but below toast */
-  dialog{
-    position:fixed;
-    top:50%; left:50%;
-    transform: translate(-50%, -50%);
-    z-index: 9001;
+  dialog[open]{
+    display:flex;
+    flex-direction:column;
+  }
+  dialog .modal-head,
+  dialog .modal-foot{
+    flex: 0 0 auto;
+  }
+  dialog .modal-body{
+    flex: 1 1 auto;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Toast always on top */
@@ -1448,6 +1457,54 @@ body.theme-light #recordsDialog .check .switch{
   #recordsDialog .stats-row{grid-template-columns:46px minmax(0,1fr) 60px 60px;}
 }
 
+/* 图纸消耗计算 */
+#patternCalcDialog .calc-toolbar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:8px;
+  margin-bottom:6px;
+}
+#patternCalcDialog .calc-table{margin-top:4px;}
+#patternCalcDialog .calc-row{
+  display:grid;
+  align-items:center;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid var(--border);
+  font-size:12px;
+  grid-template-columns:90px 90px 90px 110px;
+}
+#patternCalcDialog .calc-row.calc-head{
+  padding-top:2px;
+  padding-bottom:8px;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:600;
+  border-bottom:1px solid var(--border);
+}
+#patternCalcDialog .calc-row.calc-head > div{white-space:nowrap;}
+#patternCalcDialog .calc-row .num{font-variant-numeric:tabular-nums;}
+#patternCalcDialog .calc-code{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+#patternCalcDialog .calc-dot{
+  width:12px;
+  height:12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.15);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);
+  flex:0 0 auto;
+}
+#patternCalcDialog .calc-remain.debt{color: var(--danger); font-weight:600;}
+
+@media (max-width: 560px){
+  #patternCalcDialog .calc-row{grid-template-columns:70px 70px 70px 90px; gap:8px;}
+}
+
 
 
 /* 移动端：余量排序与布局切换同一行，并缩小切换按钮（更精致） */
@@ -1631,6 +1688,10 @@ body.theme-light #recordsDialog .check .switch{
       border-color: rgba(249,115,22,.5);
       box-shadow: 0 14px 26px rgba(249,115,22,.12), inset 0 0 0 1px rgba(249,115,22,.22);
     }
+    .action-card.tertiary{
+      border-color: rgba(52,211,153,.5);
+      box-shadow: 0 14px 26px rgba(52,211,153,.12), inset 0 0 0 1px rgba(52,211,153,.22);
+    }
     body.theme-light .action-card{
       border-color: rgba(15,23,42,.12);
       box-shadow: 0 14px 26px rgba(15,23,42,.12);
@@ -1642,6 +1703,10 @@ body.theme-light #recordsDialog .check .switch{
     body.theme-light .action-card.secondary{
       border-color: rgba(249,115,22,.45);
       box-shadow: 0 14px 26px rgba(249,115,22,.12), inset 0 0 0 1px rgba(249,115,22,.2);
+    }
+    body.theme-light .action-card.tertiary{
+      border-color: rgba(22,163,74,.45);
+      box-shadow: 0 14px 26px rgba(22,163,74,.12), inset 0 0 0 1px rgba(22,163,74,.2);
     }
     .action-title{ font-size:18px; font-weight:700; letter-spacing:.3px; }
     .action-desc{ font-size:12px; color:var(--muted); }
@@ -1864,11 +1929,15 @@ body.theme-light #recordsDialog .check .switch{
         <div class="action-grid">
           <button class="action-card primary" id="btnConsume" type="button">
             <span class="action-title">消耗库存</span>
-            <span class="action-desc">AI智能识别 / 手动记录</span>
+            <span class="action-desc">AI智能识别 / 手动记录 / CSV文件上传</span>
           </button>
           <button class="action-card secondary" id="btnRestock" type="button">
             <span class="action-title">补充库存</span>
             <span class="action-desc">手动记录 / 批量记录 / CSV文件上传</span>
+          </button>
+          <button class="action-card tertiary" id="btnPatternCalc" type="button">
+            <span class="action-title">图纸消耗计算</span>
+            <span class="action-desc">预计算图纸消耗是否超过库存</span>
           </button>
         </div>
       </section>
@@ -1886,6 +1955,7 @@ body.theme-light #recordsDialog .check .switch{
             <div class="tab-nav">
               <button type="button" class="tab-btn" data-tab="consume-ai">AI智能统计</button>
               <button type="button" class="tab-btn active" data-tab="consume-manual">手动记录</button>
+              <button type="button" class="tab-btn" data-tab="consume-batch">上传文件</button>
             </div>
             <div class="tab-panel active" id="consumeManualPanel">
               <div class="modal-field">
@@ -1901,6 +1971,25 @@ body.theme-light #recordsDialog .check .switch{
               </div>
               <div class="modal-field">
                 <button id="consumeAddRow" type="button">+ 添加一行</button>
+              </div>
+            </div>
+
+            <div class="tab-panel" id="consumeBatchPanel">
+              <div class="modal-field">
+                <label for="consumeBatchPattern">图纸名称（选填）</label>
+                <input type="text" id="consumeBatchPattern" placeholder="建议填写，20字以内" maxlength="20" />
+                <div class="help">图纸名称将在色号的消耗明细中展示</div>
+              </div>
+              <div class="modal-field">
+                <label>上传 CSV 格式文件</label>
+                <div class="file-upload">
+                  <label class="file-upload-label" for="consumeFile">
+                    <span class="file-upload-title">选择 CSV 文件</span>
+                    <span class="file-upload-desc">CSV 第一列=色号，第二列=消耗数量，示例：F11,500</span>
+                    <span class="file-upload-filename" id="consumeFileName">未选择文件</span>
+                  </label>
+                  <input type="file" id="consumeFile" accept=".csv,text/csv" />
+                </div>
               </div>
             </div>
 
@@ -2018,6 +2107,56 @@ body.theme-light #recordsDialog .check .switch{
 
         <div class="modal-foot">
           <button class="btn-secondary" id="restockConfirm">确认补充</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="page subpage" id="pagePatternCalc" data-page="pattern-calc">
+      <div class="page-header with-back">
+        <button class="back-btn" id="patternCalcClose" type="button">返回</button>
+        <div class="page-title">图纸消耗计算</div>
+      </div>
+
+      <section class="panel" id="patternCalcDialog">
+        <div class="modal-body">
+          <div class="modal-field">
+            <div class="file-upload">
+              <label class="file-upload-label" for="patternCalcImage">
+                <span class="file-upload-title">选择图纸</span>
+                <span class="file-upload-desc">支持 JPG/PNG，仅支持底部有色号统计的图纸</span>
+                <span class="file-upload-filename" id="patternCalcImageName">未选择图纸</span>
+              </label>
+              <input type="file" id="patternCalcImage" accept="image/*" />
+            </div>
+          </div>
+
+          <div class="modal-field">
+            <div class="quick-group">
+              <button id="patternCalcRecognize" type="button" class="btn-secondary">开始计算</button>
+              <button id="patternCalcClear" type="button" class="btn-ghost" style="display:none;">清空结果</button>
+            </div>
+            <div class="help">系统将调用AI统计色号与数量，并与当前库存对比</div>
+          </div>
+
+          <div class="modal-field" id="patternCalcResultWrap" style="display:none;">
+            <label>计算结果（按消耗数量从高到低排序）</label>
+            <div class="calc-toolbar">
+              <span class="meta-chip" id="patternCalcTotalChip">总消耗：0</span>
+              <span class="meta-chip" id="patternCalcCountChip">色号：0</span>
+              <span class="meta-chip" id="patternCalcShortChip">不足：0</span>
+            </div>
+            <div class="calc-table">
+              <div class="calc-row calc-head">
+                <div>色号</div>
+                <div class="num">需要消耗</div>
+                <div class="num">当前库存</div>
+                <div class="num">拼完剩余</div>
+              </div>
+              <div id="patternCalcList" class="calc-list"></div>
+              <div class="empty" id="patternCalcEmpty" style="display:none;">暂无识别结果</div>
+            </div>
+            <div class="help" id="patternCalcUnknown" style="margin-top:6px;"></div>
+          </div>
         </div>
       </section>
     </section>
@@ -2258,7 +2397,7 @@ body.theme-light #recordsDialog .check .switch{
 
 
   <!-- 拼豆记录 -->
-<!-- 删除记录二次确认 -->
+  <!-- 删除记录二次确认 -->
   <dialog id="recordDeleteDialog">
     <div class="modal-head">
       <h3>删除记录</h3>
@@ -2270,6 +2409,32 @@ body.theme-light #recordsDialog .check .switch{
     <div class="modal-foot">
       <button id="recordDeleteCancel" class="btn-ghost" type="button">取消</button>
       <button id="recordDeleteConfirm" class="btn-danger" type="button">确认删除</button>
+    </div>
+  </dialog>
+
+  <!-- 编辑记录 -->
+  <dialog id="recordEditDialog">
+    <div class="modal-head">
+      <h3 id="recordEditTitle">编辑记录</h3>
+      <button id="recordEditClose">关闭</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field" id="recordEditPatternField">
+        <label for="recordEditPattern">图纸名称（选填）</label>
+        <input type="text" id="recordEditPattern" placeholder="建议填写，20字以内" maxlength="20" />
+      </div>
+      <div class="modal-field">
+        <label>色号与数量</label>
+        <div class="record-rows" id="recordEditRows"></div>
+        <div class="help">单次最多支持添加 100 条记录</div>
+      </div>
+      <div class="modal-field">
+        <button id="recordEditAddRow" type="button">+ 添加一行</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button id="recordEditCancel" class="btn-ghost" type="button">取消</button>
+      <button id="recordEditConfirm" class="btn-primary" type="button">保存修改</button>
     </div>
   </dialog>
 
@@ -2423,7 +2588,7 @@ const API_BASE = window.location.origin;
 
     // ====== App page navigation ======
     const APP_PAGE_KEY = "beads_app_page_v1";
-    const SUBPAGE_PARENT = { consume: "records", restock: "records" };
+    const SUBPAGE_PARENT = { consume: "records", restock: "records", "pattern-calc": "records" };
 
     function showPage(page, opts){
       const target = page || "inventory";
@@ -2896,37 +3061,7 @@ CRITICAL_THRESHOLD = Number(data.critical ?? 300) || 300;
 }
 
     function nowIso(){return new Date().toISOString();}
-    function formatTime(iso){
-      if(!iso) return "";
-      try{
-        let d=new Date(iso);
-        if(isNaN(d.getTime()) && typeof iso==="string"){
-          // 兼容 iOS Safari 对 "YYYY-MM-DD HH:mm:ss" 的解析
-          d=new Date(iso.replace(" ","T"));
-        }
-        if(isNaN(d.getTime())) return String(iso);
-        return d.toLocaleString();
-      }catch{
-        return String(iso||"");
-      }
-    }
-
-
     function pad2(n){return String(n).padStart(2,"0");}
-    function formatTimeMinute(iso){
-      if(!iso) return "";
-      try{
-        let d = (typeof iso==="number") ? new Date(iso) : new Date(iso);
-        if(isNaN(d.getTime()) && typeof iso==="string"){
-          d=new Date(iso.replace(" ","T"));
-        }
-        if(isNaN(d.getTime())) return String(iso);
-        return `${d.getFullYear()}/${pad2(d.getMonth()+1)}/${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-      }catch{
-        return String(iso||"");
-      }
-    }
-
 function formatTimeSecondParts(iso){
       if(!iso) return {date:"", time:""};
       try{
@@ -3173,6 +3308,81 @@ function formatTimeSecondParts(iso){
           deleteGuestRecordGroup(gid, type);
           saveGuest();
           return {ok:true, criticalThreshold: CRITICAL_THRESHOLD};
+        }
+
+        if(path==="/api/recordGroupUpdate"){
+          const gid = String(data?.gid||"");
+          const type = String(data?.type||"").toLowerCase();
+          const items = Array.isArray(data?.items) ? data.items : [];
+          const hasPattern = Object.prototype.hasOwnProperty.call(data || {}, "pattern");
+          const patternRaw = hasPattern ? String(data?.pattern || "").trim() : "";
+          const pattern = (hasPattern && patternRaw) ? patternRaw : null;
+          if(!gid) throw new Error("missing gid");
+          if(!["consume","restock"].includes(type)) throw new Error("invalid type");
+          if(items.length===0) throw new Error("invalid items");
+
+          const groupItems = (GUEST_HISTORY||[]).filter(h=>{
+            if(String(h?.type||"").toLowerCase() !== type) return false;
+            return _guestGroupKey(h) === gid;
+          });
+          if(groupItems.length===0) throw new Error("group not found");
+
+          const baseTs = groupItems.reduce((acc,it)=>{
+            if(!acc) return it.ts;
+            return String(it.ts||"") > String(acc||"") ? it.ts : acc;
+          }, groupItems[0]?.ts);
+          const baseSource = String(groupItems[0]?.source || "");
+          const basePattern = String(groupItems[0]?.pattern || "");
+          const finalPattern = type==="consume"
+            ? (hasPattern ? pattern : (basePattern || null))
+            : (basePattern || null);
+
+          const oldMap = new Map();
+          groupItems.forEach(it=>{
+            const code = String(it?.code||"").toUpperCase();
+            const qty = Number(it?.qty||0) || 0;
+            if(!code || qty<=0) return;
+            oldMap.set(code, (oldMap.get(code)||0) + qty);
+          });
+
+          const newMap = new Map();
+          for(const it of items){
+            const code = String(it?.code||"").trim().toUpperCase();
+            const qty = Number(it?.qty);
+            if(!code) throw new Error("invalid code");
+            if(!(code in INVENTORY) || !(code in COLORS)) throw new Error("unknown code");
+            if(!Number.isInteger(qty) || qty<=0) throw new Error("invalid qty");
+            newMap.set(code, (newMap.get(code)||0) + Math.abs(Math.floor(qty)));
+          }
+
+          const union = new Set([...oldMap.keys(), ...newMap.keys()]);
+          union.forEach(code=>{
+            const oldQty = oldMap.get(code) || 0;
+            const newQty = newMap.get(code) || 0;
+            const diff = newQty - oldQty;
+            if(diff===0) return;
+            if(type==="consume") INVENTORY[code] = (INVENTORY[code]??0) - diff;
+            else INVENTORY[code] = (INVENTORY[code]??0) + diff;
+          });
+
+          GUEST_HISTORY = (GUEST_HISTORY||[]).filter(h=>{
+            if(String(h?.type||"").toLowerCase() !== type) return true;
+            return _guestGroupKey(h) !== gid;
+          });
+
+          for(const [code, qty] of newMap.entries()){
+            GUEST_HISTORY.unshift({
+              gid,
+              code,
+              ts: baseTs || new Date().toISOString(),
+              type,
+              qty,
+              pattern: finalPattern,
+              source: baseSource
+            });
+          }
+          saveGuest();
+          return {ok:true};
         }
 
         if(path==="/api/adjust"){
@@ -4007,15 +4217,6 @@ function toast(message,type="success"){
         reader.readAsArrayBuffer(file);
       });
     }
-    function normalizeHex(str){
-      const raw=(str||"").trim().toUpperCase();
-      if(!raw) return null;
-      let s=raw;
-      if(s.startsWith("#")) s=s.slice(1);
-      if(!/^[0-9A-F]{6}$/.test(s)) return null;
-      return"#"+s;
-    }
-
     // tabs
     const consumeTabsState={active:"consume-manual"};
     const restockTabsState={active:"restock-manual"};
@@ -4026,6 +4227,7 @@ function toast(message,type="success"){
       const btns=Array.from(root.querySelectorAll(".tab-nav .tab-btn"));
       const panels={
         "consume-manual":document.getElementById("consumeManualPanel"),
+        "consume-batch":document.getElementById("consumeBatchPanel"),
         "consume-ai":document.getElementById("consumeAiPanel"),
         "restock-manual":document.getElementById("restockManualPanel"),
         "restock-batch":document.getElementById("restockBatchPanel"),
@@ -4083,6 +4285,7 @@ function toast(message,type="success"){
       container.appendChild(row);
       updateManualRowDeleteButtons(container);
       if(onChange) onChange();
+      return row;
     }
 
     // 消耗-手动统计
@@ -4107,6 +4310,9 @@ function toast(message,type="success"){
     const consumeDialog=document.getElementById("consumeDialog");
     const consumeManualPatternInput=document.getElementById("consumeManualPattern");
     const consumeManualRows=document.getElementById("consumeManualRows");
+    const consumeFileInput=document.getElementById("consumeFile");
+    const consumeFileName=document.getElementById("consumeFileName");
+    const consumeBatchPatternInput=document.getElementById("consumeBatchPattern");
 
     // 图纸识别（AI）
     const consumeAiPatternInput=document.getElementById("consumeAiPattern");
@@ -4295,6 +4501,9 @@ function toast(message,type="success"){
 
     document.getElementById("btnConsume").addEventListener("click",()=>{
       consumeManualPatternInput.value="";
+      if(consumeBatchPatternInput) consumeBatchPatternInput.value="";
+      if(consumeFileInput) consumeFileInput.value="";
+      if(consumeFileName) consumeFileName.textContent="未选择文件";
       // AI reset
       consumeAiPatternInput.value="";
       consumeAiImageInput.value="";
@@ -4318,6 +4527,9 @@ function toast(message,type="success"){
     });
     consumeAiImageInput.addEventListener("change",()=>{
       consumeAiImageName.textContent=consumeAiImageInput.files[0]?.name||"未选择图片";
+    });
+    consumeFileInput?.addEventListener("change",()=>{
+      if(consumeFileName) consumeFileName.textContent=consumeFileInput.files[0]?.name||"未选择文件";
     });
     consumeAiRecognizeBtn.addEventListener("click", aiRecognize);
     consumeAiClearBtn.addEventListener("click", ()=>{ aiClearResult(); toast("已清空识别结果","success"); });
@@ -4362,7 +4574,6 @@ function toast(message,type="success"){
             items.push({code,qty});
           }
           if(items.length===0){toast("请至少添加一条记录","error");return;}
-          if(items.length===0){toast("请至少添加一条记录","error");return;}
 
           await apiPost("/api/adjustBatch",{
             items: items.map(item=>({
@@ -4371,6 +4582,29 @@ function toast(message,type="success"){
               qty:item.qty,
               pattern:pattern||null,
               source:"form"
+            }))
+          },{headers:{"x-idempotency-key": reqId}});
+
+          await syncAll();
+          showPage("records", {scrollTop:true, smooth:true});
+          toast("记录成功","success");
+
+        }else if(consumeTabsState.active==="consume-batch"){
+          const pattern=(consumeBatchPatternInput?.value || "").trim();
+          if(pattern.length>20){toast("图纸名称不超过 20 字","error");return;}
+          const file=consumeFileInput?.files?.[0];
+          if(!file){toast("请先选择 CSV 文件","error");return;}
+          const text=await readFileText(file);
+          const rows=parseCsv(text);
+          if(rows.length===0) throw new Error("empty");
+
+          await apiPost("/api/adjustBatch",{
+            items: rows.map(r=>({
+              code:r.code,
+              type:"consume",
+              qty:r.qty,
+              pattern: pattern || null,
+              source:"csv"
             }))
           },{headers:{"x-idempotency-key": reqId}});
 
@@ -4598,6 +4832,176 @@ function toast(message,type="success"){
       }
     });
 
+    // 图纸消耗计算
+    const patternCalcImageInput=document.getElementById("patternCalcImage");
+    const patternCalcImageName=document.getElementById("patternCalcImageName");
+    const patternCalcRecognizeBtn=document.getElementById("patternCalcRecognize");
+    const patternCalcClearBtn=document.getElementById("patternCalcClear");
+    const patternCalcResultWrap=document.getElementById("patternCalcResultWrap");
+    const patternCalcList=document.getElementById("patternCalcList");
+    const patternCalcEmpty=document.getElementById("patternCalcEmpty");
+    const patternCalcTotalChip=document.getElementById("patternCalcTotalChip");
+    const patternCalcCountChip=document.getElementById("patternCalcCountChip");
+    const patternCalcShortChip=document.getElementById("patternCalcShortChip");
+    const patternCalcUnknown=document.getElementById("patternCalcUnknown");
+
+    function clearPatternCalcResult(){
+      if(patternCalcList) patternCalcList.innerHTML="";
+      if(patternCalcResultWrap) patternCalcResultWrap.style.display="none";
+      if(patternCalcEmpty) patternCalcEmpty.style.display="none";
+      if(patternCalcClearBtn) patternCalcClearBtn.style.display="none";
+      if(patternCalcTotalChip) patternCalcTotalChip.textContent="总消耗：0";
+      if(patternCalcCountChip) patternCalcCountChip.textContent="色号：0";
+      if(patternCalcShortChip) patternCalcShortChip.textContent="不足：0";
+      if(patternCalcUnknown) patternCalcUnknown.textContent="";
+    }
+
+    function normalizePatternCalcItems(items){
+      const map=new Map();
+      for(const it of (items||[])){
+        const code=String(it?.code||"").trim().toUpperCase();
+        const qty=Number(it?.qty);
+        if(!/^([A-Z])(\d{1,2})$/.test(code)) continue;
+        if(!Number.isInteger(qty) || qty<=0) continue;
+        if(!map.has(code)) map.set(code,{code,qty});
+        else map.get(code).qty += qty;
+      }
+      return Array.from(map.values());
+    }
+
+    function renderPatternCalc(items){
+      if(!patternCalcList) return;
+      const rows=(items||[]).map(it=>{
+        const code=it.code;
+        const qty=Number(it.qty)||0;
+        const inventory=Number(INVENTORY?.[code] ?? 0) || 0;
+        const remain=inventory - qty;
+        const hex=COLORS[code] || MASTER_HEX[code] || "#777777";
+        return {code,qty,inventory,remain,hex};
+      }).sort((a,b)=> (b.qty - a.qty) || sortCodes(a.code,b.code));
+
+      patternCalcList.innerHTML="";
+
+      const total=rows.reduce((acc,it)=> acc + (Number(it.qty)||0), 0);
+      const shortage=rows.filter(it=>it.remain<0).length;
+
+      if(patternCalcTotalChip) patternCalcTotalChip.textContent=`总消耗：${total}`;
+      if(patternCalcCountChip) patternCalcCountChip.textContent=`色号：${rows.length}`;
+      if(patternCalcShortChip) patternCalcShortChip.textContent=`不足：${shortage}`;
+
+      if(patternCalcResultWrap) patternCalcResultWrap.style.display="block";
+      if(patternCalcClearBtn) patternCalcClearBtn.style.display="inline-flex";
+      if(patternCalcEmpty) patternCalcEmpty.style.display=rows.length ? "none" : "block";
+
+      const unknown=rows.filter(it=>!COLORS[it.code]).map(it=>it.code);
+      if(patternCalcUnknown){
+        const uniq=Array.from(new Set(unknown)).sort(sortCodes);
+        patternCalcUnknown.textContent = uniq.length
+          ? `提示：以下色号不在你的色号库中（当前库存按 0 计算）：${uniq.join(", ")}`
+          : "";
+      }
+
+      if(rows.length===0) return;
+
+      rows.forEach(it=>{
+        const row=document.createElement("div");
+        row.className="calc-row";
+
+        const cCode=document.createElement("div");
+        cCode.className="calc-code";
+        const dot=document.createElement("span");
+        dot.className="calc-dot";
+        dot.style.background=it.hex || "#777777";
+        const txt=document.createElement("span");
+        txt.textContent=it.code;
+        cCode.appendChild(dot);
+        cCode.appendChild(txt);
+
+        const cNeed=document.createElement("div");
+        cNeed.className="num";
+        cNeed.textContent=String(it.qty);
+
+        const cInv=document.createElement("div");
+        cInv.className="num";
+        cInv.textContent=String(it.inventory);
+
+        const cRemain=document.createElement("div");
+        cRemain.className="num calc-remain";
+        if(it.remain<0) cRemain.classList.add("debt");
+        cRemain.textContent=String(it.remain);
+
+        row.appendChild(cCode);
+        row.appendChild(cNeed);
+        row.appendChild(cInv);
+        row.appendChild(cRemain);
+
+        patternCalcList.appendChild(row);
+      });
+    }
+
+    async function patternCalcRecognize(){
+      if(!IS_LOGGED_IN){ toast("请登录后使用AI功能","warn"); return; }
+      const file=patternCalcImageInput?.files?.[0];
+      if(!file){
+        toast("请先选择图纸图片","error");
+        return;
+      }
+
+      patternCalcRecognizeBtn.disabled=true;
+      const oldText=patternCalcRecognizeBtn.textContent;
+      patternCalcRecognizeBtn.textContent="计算中…";
+
+      try{
+        if(patternCalcList) patternCalcList.innerHTML="";
+        if(patternCalcEmpty) patternCalcEmpty.style.display="none";
+        if(patternCalcUnknown) patternCalcUnknown.textContent="";
+        const fd=new FormData();
+        fd.append("image", file);
+
+        const res=await apiPostForm("/api/recognize-pattern", fd);
+
+        const items = Array.isArray(res.items) ? res.items
+                   : Array.isArray(res.data) ? res.data
+                   : Array.isArray(res?.result?.items) ? res.result.items
+                   : [];
+
+        const normalized=normalizePatternCalcItems(items);
+
+        if(normalized.length===0){
+          if(patternCalcResultWrap) patternCalcResultWrap.style.display="block";
+          if(patternCalcEmpty) patternCalcEmpty.style.display="block";
+          if(patternCalcClearBtn) patternCalcClearBtn.style.display="inline-flex";
+          if(patternCalcUnknown) patternCalcUnknown.textContent="";
+          if(patternCalcTotalChip) patternCalcTotalChip.textContent="总消耗：0";
+          if(patternCalcCountChip) patternCalcCountChip.textContent="色号：0";
+          if(patternCalcShortChip) patternCalcShortChip.textContent="不足：0";
+          toast("未识别到有效色号，请换一张更清晰的图片","error");
+          return;
+        }
+
+        renderPatternCalc(normalized);
+        toast("计算完成","success");
+      }catch(e){
+        toast(e.message || "识别失败，请检查服务端接口","error");
+      }finally{
+        patternCalcRecognizeBtn.disabled=false;
+        patternCalcRecognizeBtn.textContent=oldText;
+      }
+    }
+
+    document.getElementById("btnPatternCalc").addEventListener("click",()=>{
+      if(patternCalcImageInput) patternCalcImageInput.value="";
+      if(patternCalcImageName) patternCalcImageName.textContent="未选择图纸";
+      clearPatternCalcResult();
+      showPage("pattern-calc", {scrollTop:true, smooth:true});
+    });
+    document.getElementById("patternCalcClose").addEventListener("click",()=>showPage("records", {scrollTop:true, smooth:true}));
+    patternCalcImageInput?.addEventListener("change",()=>{
+      if(patternCalcImageName) patternCalcImageName.textContent = patternCalcImageInput.files[0]?.name || "未选择图纸";
+    });
+    patternCalcRecognizeBtn?.addEventListener("click", patternCalcRecognize);
+    patternCalcClearBtn?.addEventListener("click", ()=>{ clearPatternCalcResult(); toast("已清空识别结果","success"); });
+
     // 调整库存
     const adjustDialog=document.getElementById("adjustDialog");
     const adjustTypeSel=document.getElementById("adjustType");
@@ -4823,6 +5227,16 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
   recordDeleteDialog.__submodalHooked = true;
 }
 
+    const recordEditDialog = document.getElementById("recordEditDialog");
+    const recordEditTitle = document.getElementById("recordEditTitle");
+    const recordEditPatternField = document.getElementById("recordEditPatternField");
+    const recordEditPatternInput = document.getElementById("recordEditPattern");
+    const recordEditRows = document.getElementById("recordEditRows");
+    const recordEditAddRow = document.getElementById("recordEditAddRow");
+    const recordEditCancel = document.getElementById("recordEditCancel");
+    const recordEditConfirm = document.getElementById("recordEditConfirm");
+    const recordEditClose = document.getElementById("recordEditClose");
+
 
     const recordsOnlyWithPattern = document.getElementById("recordsOnlyWithPattern");
     const recordsConsumeTotalChip = document.getElementById("recordsConsumeTotalChip");
@@ -4839,7 +5253,8 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       active: "consume",
       expanded: new Set(),
       detailCache: new Map(),
-      pendingDelete: null
+      pendingDelete: null,
+      pendingEdit: null
     };
 
     function _recKey(type,gid){ return `${type}|${gid}`; }
@@ -5007,6 +5422,12 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
         btnDel.textContent="删除";
         btnDel.addEventListener("click", ()=>openRecordDeleteConfirm(type, gid));
 
+        const btnEdit = document.createElement("button");
+        btnEdit.type="button";
+        btnEdit.className="link-action";
+        btnEdit.textContent="编辑";
+        btnEdit.addEventListener("click", ()=>openRecordEdit(type, gid, pattern));
+
         const btnToggle = document.createElement("button");
         btnToggle.type="button";
         btnToggle.className="link-action";
@@ -5034,6 +5455,7 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
         });
 
         cOp.appendChild(btnDel);
+        cOp.appendChild(btnEdit);
         cOp.appendChild(btnToggle);
         row.appendChild(cOp);
 
@@ -5102,6 +5524,98 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       container.appendChild(wrap);
     }
 
+    function fillRecordEditRows(items){
+      // Edit uses aggregated per-code items (same as detail view).
+      if(!recordEditRows) return;
+      recordEditRows.innerHTML = "";
+      const list = Array.isArray(items) ? items.slice() : [];
+      if(list.length===0){
+        createManualRow(recordEditRows);
+        return;
+      }
+      list.sort((a,b)=> (Number(b.qty||0)-Number(a.qty||0)) || sortCodes(String(a.code||""), String(b.code||"")));
+      list.forEach(it=>{
+        const row = createManualRow(recordEditRows);
+        const inputs = row ? row.querySelectorAll("input") : [];
+        if(inputs[0]) inputs[0].value = String(it.code||"").trim().toUpperCase();
+        if(inputs[1]) inputs[1].value = String(Number(it.qty||0) || "");
+      });
+    }
+
+    async function openRecordEdit(type, gid, pattern){
+      if(!recordEditDialog) return;
+      RECORDS_STATE.pendingEdit = {type, gid};
+      if(recordEditTitle) recordEditTitle.textContent = type==="consume" ? "编辑消耗记录" : "编辑补充记录";
+      if(recordEditPatternField) recordEditPatternField.style.display = type==="consume" ? "" : "none";
+      if(recordEditPatternInput){
+        const p = (pattern==="手动调整") ? "" : String(pattern||"");
+        recordEditPatternInput.value = p;
+      }
+      if(recordEditRows) recordEditRows.innerHTML = "<div class='help'>加载中...</div>";
+      openDialog(recordEditDialog);
+
+      const key = _recKey(type, gid);
+      let items = RECORDS_STATE.detailCache.get(key);
+      if(!items){
+        try{
+          const res = await apiGet(`/api/recordGroupDetail?gid=${encodeURIComponent(gid)}&type=${encodeURIComponent(type)}`);
+          items = Array.isArray(res.data) ? res.data : [];
+          RECORDS_STATE.detailCache.set(key, items);
+        }catch(e){
+          toast(e?.message || "加载明细失败","error");
+          items = [];
+        }
+      }
+      fillRecordEditRows(items);
+    }
+
+    function closeRecordEditDialog(){
+      closeDialog(recordEditDialog);
+      RECORDS_STATE.pendingEdit = null;
+    }
+
+    async function doRecordEdit(){
+      const p = RECORDS_STATE.pendingEdit;
+      if(!p) return;
+      if(recordEditConfirm && recordEditConfirm.disabled) return;
+      if(recordEditConfirm) recordEditConfirm.disabled = true;
+      try{
+        const rows = Array.from(recordEditRows?.querySelectorAll(".record-row") || []);
+        if(rows.length===0){ toast("请至少添加一条记录","error"); return; }
+        const items = [];
+        for(const row of rows){
+          const inputs = row.querySelectorAll("input");
+          const code = (inputs[0]?.value || "").trim().toUpperCase();
+          const qtyStr = (inputs[1]?.value || "").trim();
+          if(!code && !qtyStr) continue;
+          if(!code || !COLORS[code]){ toast("存在空的色号或无效色号","error"); return; }
+          const qty = Number(qtyStr);
+          if(!Number.isInteger(qty) || qty<=0){ toast("存在无效数量（必须为正整数）","error"); return; }
+          items.push({code, qty});
+        }
+        if(items.length===0){ toast("请至少添加一条记录","error"); return; }
+
+        const payload = {gid: p.gid, type: p.type, items};
+        if(p.type==="consume"){
+          const pattern = (recordEditPatternInput?.value || "").trim();
+          if(pattern.length>20){ toast("图纸名称不超过 20 字","error"); return; }
+          payload.pattern = pattern || null;
+        }
+
+        await apiPost("/api/recordGroupUpdate", payload);
+        closeRecordEditDialog();
+        RECORDS_STATE.detailCache.clear();
+        RECORDS_STATE.expanded.clear();
+        await syncAll();
+        await loadAndRenderRecordGroups();
+        toast("保存成功","success");
+      }catch(e){
+        toast(e?.message || "保存失败","error");
+      }finally{
+        if(recordEditConfirm) recordEditConfirm.disabled = false;
+      }
+    }
+
     function openRecordDeleteConfirm(type, gid){
       RECORDS_STATE.pendingDelete = {type, gid};
       const textEl = document.getElementById("recordDeleteText");
@@ -5141,6 +5655,18 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
     document.getElementById("recordDeleteClose").addEventListener("click", closeRecordDeleteDialog);
     document.getElementById("recordDeleteCancel").addEventListener("click", closeRecordDeleteDialog);
     document.getElementById("recordDeleteConfirm").addEventListener("click", doDeleteRecord);
+    if(recordEditClose) recordEditClose.addEventListener("click", closeRecordEditDialog);
+    if(recordEditCancel) recordEditCancel.addEventListener("click", closeRecordEditDialog);
+    if(recordEditConfirm) recordEditConfirm.addEventListener("click", doRecordEdit);
+    if(recordEditAddRow) recordEditAddRow.addEventListener("click", ()=>{
+      const rows = recordEditRows?.querySelectorAll(".record-row") || [];
+      if(rows.length>=100){ toast("一次最多添加 100 条记录","error"); return; }
+      createManualRow(recordEditRows);
+    });
+    if(recordEditDialog && !recordEditDialog.__hooked){
+      recordEditDialog.addEventListener("close", ()=>{ RECORDS_STATE.pendingEdit = null; });
+      recordEditDialog.__hooked = true;
+    }
 
     document.querySelectorAll("#recordsDialog .tab-nav .tab-btn").forEach(btn=>{
       btn.addEventListener("click", ()=>{

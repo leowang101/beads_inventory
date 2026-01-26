@@ -677,11 +677,6 @@ app.post("/api/register", async (req, res) => {
       const userId = r.insertId;
 
       await conn.query(
-        `INSERT IGNORE INTO user_inventory(user_id, code, qty, hex)
-         SELECT ?, p.code, 0, p.hex FROM palette p WHERE p.is_default=1`,
-        [userId]
-      );
-      await conn.query(
         `INSERT IGNORE INTO user_settings(user_id, skey, svalue) VALUES
          (?, 'criticalThreshold', '300')`,
         [userId]
@@ -1218,6 +1213,220 @@ app.get("/api/recordGroupDetail", requireAuth, async (req, res) => {
     }
 
     return sendJson(res, 400, { ok:false, message:"invalid gid" });
+  }catch(e){
+    sendJson(res, 500, { ok:false, message:e.message });
+  }
+});
+
+app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
+  try{
+    // Edit a grouped record: compute inventory delta (new - old) and rewrite group history.
+    const gid = String(req.body?.gid || "");
+    const type = String(req.body?.type || "").toLowerCase();
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+    const hasPattern = Object.prototype.hasOwnProperty.call(req.body || {}, "pattern");
+    const patternRaw = hasPattern ? String(req.body?.pattern || "") : "";
+
+    if(!gid) return sendJson(res, 400, { ok:false, message:"missing gid" });
+    if(!["consume","restock"].includes(type)) return sendJson(res, 400, { ok:false, message:"invalid type" });
+    if(!items.length) return sendJson(res, 400, { ok:false, message:"empty items" });
+    if(items.length > 500) return sendJson(res, 400, { ok:false, message:"too many items" });
+
+    const normPattern = (val)=>{
+      const s = (val === null || val === undefined) ? "" : String(val);
+      const t = s.trim();
+      return t ? t.slice(0, 64) : null;
+    };
+    const pattern = hasPattern ? normPattern(patternRaw) : null;
+
+    // Normalize items (merge same code)
+    const newMap = new Map();
+    for(const it of items){
+      const code = String(it?.code || "").trim().toUpperCase();
+      const qty = Number(it?.qty);
+      if(!code) return sendJson(res, 400, { ok:false, message:"missing code" });
+      if(!Number.isFinite(qty) || qty <= 0) return sendJson(res, 400, { ok:false, message:"invalid qty" });
+      const n = Math.abs(Math.floor(qty));
+      newMap.set(code, (newMap.get(code) || 0) + n);
+    }
+    const normalized = Array.from(newMap.entries()).map(([code, qty])=>({code, qty}));
+    if(normalized.length === 0) return sendJson(res, 400, { ok:false, message:"empty items" });
+
+    let whereSql = "";
+    let whereParams = [];
+    let batchId = null;
+    let baseCreatedAt = null;
+    let basePattern = null;
+    let baseSource = null;
+
+    if(gid.startsWith("b:")){
+      batchId = gid.slice(2);
+      if(!batchId) return sendJson(res, 400, { ok:false, message:"invalid gid" });
+      const [[base]] = await safeQuery(
+        `SELECT MAX(created_at) AS created_at, MAX(pattern) AS pattern, MAX(source) AS source
+         FROM user_history
+         WHERE user_id=? AND htype=? AND batch_id=?`,
+        [req.user.id, type, batchId]
+      );
+      if(!base || !base.created_at){
+        return sendJson(res, 404, { ok:false, message:"group not found" });
+      }
+      baseCreatedAt = base.created_at;
+      basePattern = base.pattern;
+      baseSource = base.source;
+      whereSql = " AND batch_id=? ";
+      whereParams = [batchId];
+    }else if(gid.startsWith("i:")){
+      const anchorId = Number(gid.slice(2));
+      if(!Number.isFinite(anchorId) || anchorId<=0){
+        return sendJson(res, 400, { ok:false, message:"invalid gid" });
+      }
+      const [[base]] = await safeQuery(
+        `SELECT created_at, IFNULL(pattern,'') AS patternKey, IFNULL(source,'') AS sourceKey
+         FROM user_history
+         WHERE user_id=? AND id=? AND htype=? LIMIT 1`,
+        [req.user.id, anchorId, type]
+      );
+      if(!base) return sendJson(res, 404, { ok:false, message:"group not found" });
+      baseCreatedAt = base.created_at;
+      basePattern = base.patternKey;
+      baseSource = base.sourceKey;
+      whereSql = " AND batch_id IS NULL AND created_at=? AND IFNULL(pattern,'')=? AND IFNULL(source,'')=? ";
+      whereParams = [baseCreatedAt, basePattern, baseSource];
+    }else{
+      return sendJson(res, 400, { ok:false, message:"invalid gid" });
+    }
+
+    const [oldRows] = await safeQuery(
+      `SELECT code, SUM(qty) AS qty
+       FROM user_history
+       WHERE user_id=? AND htype=? ${whereSql}
+       GROUP BY code`,
+      [req.user.id, type, ...whereParams]
+    );
+    if(!oldRows || oldRows.length===0){
+      return sendJson(res, 404, { ok:false, message:"group not found" });
+    }
+    const oldMap = new Map((oldRows||[]).map(r=>[String(r.code).toUpperCase(), Number(r.qty)||0]));
+
+    const codes = Array.from(newMap.keys());
+    // Validate codes exist in palette and inventory
+    if(codes.length>0){
+      const inPh = codes.map(()=>"?").join(",");
+      const [pRows] = await safeQuery(
+        `SELECT code, is_default AS isDefault FROM palette WHERE code IN (${inPh})`,
+        codes
+      );
+      const pMap = new Map((pRows||[]).map(r=>[String(r.code).toUpperCase(), Number(r.isDefault)]));
+      for(const c of codes){
+        if(!pMap.has(c)) return sendJson(res, 400, { ok:false, message:`unknown code: ${c}` });
+      }
+
+      // removed codes check
+      {
+        const rmPh = codes.map(()=>"?").join(",");
+        const [rmRows] = await safeQuery(
+          `SELECT code FROM user_removed_codes WHERE user_id=? AND code IN (${rmPh})`,
+          [req.user.id, ...codes]
+        );
+        if(rmRows && rmRows.length>0){
+          return sendJson(res, 400, { ok:false, message:"包含已删除的色号，请先在设置中重新添加色号" });
+        }
+      }
+
+      const nonDefaultCodes = codes.filter(c=> pMap.get(c) === 0);
+      if(nonDefaultCodes.length>0){
+        const inPh2 = nonDefaultCodes.map(()=>"?").join(",");
+        const [invRows] = await safeQuery(
+          `SELECT code FROM user_inventory WHERE user_id=? AND code IN (${inPh2})`,
+          [req.user.id, ...nonDefaultCodes]
+        );
+        const invSet = new Set((invRows||[]).map(r=>String(r.code).toUpperCase()));
+        for(const c of nonDefaultCodes){
+          if(!invSet.has(c)){
+            return sendJson(res, 400, { ok:false, message:"包含未添加到库存的非默认色号，请先在设置中添加对应系列" });
+          }
+        }
+      }
+    }
+
+    const unionCodes = Array.from(new Set([...oldMap.keys(), ...newMap.keys()]));
+    const deltaEntries = [];
+    for(const code of unionCodes){
+      const oldQty = oldMap.get(code) || 0;
+      const newQty = newMap.get(code) || 0;
+      const diff = newQty - oldQty;
+      if(diff === 0) continue;
+      const delta = (type==="consume" ? -diff : diff);
+      if(delta !== 0) deltaEntries.push({code, delta});
+    }
+
+    const finalPattern = (() => {
+      const base = normPattern(basePattern);
+      if(type !== "consume") return base;
+      if(hasPattern) return pattern;
+      return base;
+    })();
+    const finalSource = (() => {
+      const s = (baseSource === null || baseSource === undefined) ? "" : String(baseSource);
+      const t = s.trim();
+      return t ? t.slice(0, 32) : null;
+    })();
+    const createdAt = baseCreatedAt || new Date();
+
+    await withTransaction(async (conn)=>{
+      // Ensure inventory rows for default codes
+      if(codes.length>0){
+        const inPh = codes.map(()=>"?").join(",");
+        const params = [req.user.id, ...codes];
+        await q(conn,
+          `INSERT IGNORE INTO user_inventory(user_id, code, qty, hex)
+           SELECT ?, p.code, 0, p.hex
+           FROM palette p
+           WHERE p.is_default=1 AND p.code IN (${inPh})`,
+          params
+        );
+      }
+
+      if(deltaEntries.length>0){
+        const cases = deltaEntries.map(()=> "WHEN ? THEN ?").join(" ");
+        const placeholders = deltaEntries.map(()=> "?").join(",");
+        const params = [];
+        for(const d of deltaEntries){
+          params.push(d.code, d.delta);
+        }
+        params.push(req.user.id, ...deltaEntries.map(d=>d.code));
+        await q(
+          conn,
+          `UPDATE user_inventory
+           SET qty = qty + CASE code ${cases} ELSE 0 END
+           WHERE user_id=? AND code IN (${placeholders})`,
+          params
+        );
+      }
+
+      await q(
+        conn,
+        `DELETE FROM user_history WHERE user_id=? AND htype=? ${whereSql}`,
+        [req.user.id, type, ...whereParams]
+      );
+
+      // Preserve created_at/source so non-batch grouping keys remain stable.
+      const vals = [];
+      const params = [];
+      for(const it of normalized){
+        vals.push("(?,?,?,?,?,?,?,?)");
+        params.push(req.user.id, it.code, type, it.qty, finalPattern, finalSource, batchId, createdAt);
+      }
+      await q(
+        conn,
+        `INSERT INTO user_history(user_id, code, htype, qty, pattern, source, batch_id, created_at)
+         VALUES ${vals.join(",")}`,
+        params
+      );
+    });
+
+    sendJson(res, 200, { ok:true });
   }catch(e){
     sendJson(res, 500, { ok:false, message:e.message });
   }
