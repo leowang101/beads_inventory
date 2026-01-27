@@ -2135,7 +2135,7 @@ body.theme-light #recordsDialog .check .switch{
               <button id="patternCalcRecognize" type="button" class="btn-secondary">开始计算</button>
               <button id="patternCalcClear" type="button" class="btn-ghost" style="display:none;">清空结果</button>
             </div>
-            <div class="help">系统将调用AI统计色号与数量，并与当前库存对比</div>
+            <div class="help">系统将调用AI统计色号与数量，并与当前库存对比（支持多次补充计算，结果自动合并）</div>
           </div>
 
           <div class="modal-field" id="patternCalcResultWrap" style="display:none;">
@@ -4844,8 +4844,20 @@ function toast(message,type="success"){
     const patternCalcCountChip=document.getElementById("patternCalcCountChip");
     const patternCalcShortChip=document.getElementById("patternCalcShortChip");
     const patternCalcUnknown=document.getElementById("patternCalcUnknown");
+    let patternCalcMergedMap=new Map();
+
+    function resetPatternCalcUploader(){
+      if(patternCalcImageInput) patternCalcImageInput.value="";
+      if(patternCalcImageName) patternCalcImageName.textContent="未选择图纸";
+    }
+
+    function updatePatternCalcButton(){
+      if(!patternCalcRecognizeBtn) return;
+      patternCalcRecognizeBtn.textContent = patternCalcMergedMap.size ? "补充计算" : "开始计算";
+    }
 
     function clearPatternCalcResult(){
+      patternCalcMergedMap.clear();
       if(patternCalcList) patternCalcList.innerHTML="";
       if(patternCalcResultWrap) patternCalcResultWrap.style.display="none";
       if(patternCalcEmpty) patternCalcEmpty.style.display="none";
@@ -4854,6 +4866,8 @@ function toast(message,type="success"){
       if(patternCalcCountChip) patternCalcCountChip.textContent="色号：0";
       if(patternCalcShortChip) patternCalcShortChip.textContent="不足：0";
       if(patternCalcUnknown) patternCalcUnknown.textContent="";
+      updatePatternCalcButton();
+      resetPatternCalcUploader();
     }
 
     function normalizePatternCalcItems(items){
@@ -4867,6 +4881,17 @@ function toast(message,type="success"){
         else map.get(code).qty += qty;
       }
       return Array.from(map.values());
+    }
+
+    function mergePatternCalcItems(items){
+      for(const it of (items||[])){
+        const code=String(it?.code||"").trim().toUpperCase();
+        const qty=Number(it?.qty);
+        if(!code || !Number.isFinite(qty)) continue;
+        if(!patternCalcMergedMap.has(code)) patternCalcMergedMap.set(code,{code,qty});
+        else patternCalcMergedMap.get(code).qty += qty;
+      }
+      return Array.from(patternCalcMergedMap.values());
     }
 
     function renderPatternCalc(items){
@@ -4947,14 +4972,11 @@ function toast(message,type="success"){
         return;
       }
 
+      const hadResult=patternCalcMergedMap.size>0;
       patternCalcRecognizeBtn.disabled=true;
-      const oldText=patternCalcRecognizeBtn.textContent;
       patternCalcRecognizeBtn.textContent="计算中…";
 
       try{
-        if(patternCalcList) patternCalcList.innerHTML="";
-        if(patternCalcEmpty) patternCalcEmpty.style.display="none";
-        if(patternCalcUnknown) patternCalcUnknown.textContent="";
         const fd=new FormData();
         fd.append("image", file);
 
@@ -4968,30 +4990,32 @@ function toast(message,type="success"){
         const normalized=normalizePatternCalcItems(items);
 
         if(normalized.length===0){
-          if(patternCalcResultWrap) patternCalcResultWrap.style.display="block";
-          if(patternCalcEmpty) patternCalcEmpty.style.display="block";
-          if(patternCalcClearBtn) patternCalcClearBtn.style.display="inline-flex";
-          if(patternCalcUnknown) patternCalcUnknown.textContent="";
-          if(patternCalcTotalChip) patternCalcTotalChip.textContent="总消耗：0";
-          if(patternCalcCountChip) patternCalcCountChip.textContent="色号：0";
-          if(patternCalcShortChip) patternCalcShortChip.textContent="不足：0";
+          if(!hadResult){
+            if(patternCalcResultWrap) patternCalcResultWrap.style.display="block";
+            if(patternCalcEmpty) patternCalcEmpty.style.display="block";
+            if(patternCalcClearBtn) patternCalcClearBtn.style.display="inline-flex";
+            if(patternCalcUnknown) patternCalcUnknown.textContent="";
+            if(patternCalcTotalChip) patternCalcTotalChip.textContent="总消耗：0";
+            if(patternCalcCountChip) patternCalcCountChip.textContent="色号：0";
+            if(patternCalcShortChip) patternCalcShortChip.textContent="不足：0";
+          }
           toast("未识别到有效色号，请换一张更清晰的图片","error");
           return;
         }
 
-        renderPatternCalc(normalized);
+        const merged=mergePatternCalcItems(normalized);
+        renderPatternCalc(merged);
+        resetPatternCalcUploader();
         toast("计算完成","success");
       }catch(e){
         toast(e.message || "识别失败，请检查服务端接口","error");
       }finally{
         patternCalcRecognizeBtn.disabled=false;
-        patternCalcRecognizeBtn.textContent=oldText;
+        updatePatternCalcButton();
       }
     }
 
     document.getElementById("btnPatternCalc").addEventListener("click",()=>{
-      if(patternCalcImageInput) patternCalcImageInput.value="";
-      if(patternCalcImageName) patternCalcImageName.textContent="未选择图纸";
       clearPatternCalcResult();
       showPage("pattern-calc", {scrollTop:true, smooth:true});
     });
