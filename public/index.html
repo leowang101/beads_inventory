@@ -814,28 +814,45 @@ main{
     .category-chip:hover{ transform: translateY(-1px); }
 
     .empty-illus{
-      width:44px;
-      height:30px;
-      margin:0 auto 6px;
-      border-radius:10px;
-      border:1px dashed var(--border);
+      width:54px;
+      height:54px;
+      margin:0 auto 8px;
+      border-radius:16px;
+      border:1px dashed rgba(125,211,252,.35);
+      background:
+        radial-gradient(circle at 30% 30%, rgba(125,211,252,.16), transparent 60%),
+        radial-gradient(circle at 70% 70%, rgba(167,139,250,.12), transparent 60%),
+        rgba(255,255,255,.02);
       position:relative;
-      background: rgba(255,255,255,.02);
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
-    .empty-illus::before{
+    .empty-illus::before,
+    .empty-illus::after{
       content:"";
       position:absolute;
-      left:8px;
-      right:8px;
-      top:9px;
-      height:2px;
       border-radius:999px;
-      background: rgba(255,255,255,.15);
+      background: rgba(125,211,252,.45);
+    }
+    .empty-illus::before{
+      width:18px;
+      height:6px;
+      top:18px;
+      left:18px;
+    }
+    .empty-illus::after{
+      width:10px;
+      height:10px;
+      bottom:16px;
+      right:16px;
+      background: rgba(167,139,250,.35);
     }
     .empty-text{
       text-align:center;
-      font-size:11px;
+      font-size:12px;
       color:var(--muted);
+      letter-spacing:.2px;
     }
     .tab-nav button.active{
       background: radial-gradient(circle at 30% 0, rgba(125,211,252,.3), rgba(167,139,250,.4));
@@ -1442,6 +1459,26 @@ body.theme-light #recordsDialog .check .switch{
   border-radius: var(--radius-md);
   border:1px solid var(--border);
   background: linear-gradient(180deg, rgba(255,255,255,.02), transparent 40%), var(--panel-2);
+  position:relative;
+}
+#recordsDialog .record-head{
+  display:grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items:start;
+  gap:8px;
+}
+#recordsDialog .record-card .pattern-tag{
+  justify-self:end;
+  align-self:start;
+  font-size:10px;
+  font-weight:600;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(14,165,233,.25);
+  background: rgba(14,165,233,.12);
+  color: var(--text);
+  white-space:nowrap;
+  pointer-events:none;
 }
 #recordsDialog .records-consume .record-thumb{
   width:80px;
@@ -1571,6 +1608,10 @@ body.theme-light #recordsDialog .records-restock .record-thumb::after{
   white-space:normal;
   overflow-wrap:anywhere;
   word-break:break-word;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient: vertical;
+  overflow:hidden;
 }
 #recordsDialog .record-title.is-empty{
   color:var(--muted);
@@ -2835,15 +2876,19 @@ body.theme-light #recordsDialog .records-restock .record-thumb::after{
       <h3 id="recordEditTitle">编辑记录</h3>
       <button id="recordEditClose">关闭</button>
     </div>
-    <div class="modal-body">
-      <div class="modal-field" id="recordEditPatternField">
-        <label for="recordEditPattern">图纸名称（选填）</label>
-        <input type="text" id="recordEditPattern" placeholder="建议填写，20字以内" maxlength="20" />
-      </div>
-      <div class="modal-field" id="recordEditImageField">
-        <label>图纸图片（选填）</label>
-        <div class="file-upload">
-          <label class="file-upload-label" for="recordEditImage">
+      <div class="modal-body">
+        <div class="modal-field" id="recordEditPatternField">
+          <label for="recordEditPattern">图纸名称（选填）</label>
+          <input type="text" id="recordEditPattern" placeholder="建议填写，20字以内" maxlength="20" />
+        </div>
+        <div class="modal-field" id="recordEditCategoryField">
+          <label for="recordEditCategory">图纸分类</label>
+          <select id="recordEditCategory"></select>
+        </div>
+        <div class="modal-field" id="recordEditImageField">
+          <label>图纸图片（选填）</label>
+          <div class="file-upload">
+            <label class="file-upload-label" for="recordEditImage">
             <span class="file-upload-title">重新上传图纸</span>
             <span class="file-upload-desc">支持 JPG/PNG/WebP，将压缩后上传</span>
             <span class="file-upload-filename" id="recordEditImageName">未选择图纸</span>
@@ -5948,6 +5993,13 @@ const criticalInput=document.getElementById("criticalInput");
         .filter(c=>c.id && c.name);
     }
 
+    function getPatternCategoryNameById(id){
+      if(id === null || id === undefined || id === "") return "";
+      const sid = String(id);
+      const found = (PATTERN_CATEGORIES || []).find(c=>String(c.id)===sid);
+      return found ? String(found.name || "") : "";
+    }
+
     function renderPatternCategoryManager(){
       if(!patternCategoryList) return;
       patternCategoryList.innerHTML = "";
@@ -5972,7 +6024,7 @@ const criticalInput=document.getElementById("criticalInput");
         del.className = "btn-danger";
         del.textContent = "删除";
         del.addEventListener("click", async()=>{
-          const ok = confirm(`删除分类将清空已标记为该分类的图纸分类信息，是否确认删除？\n\n分类：${cat.name}`);
+          const ok = confirm(`删除分类将清空已标记的图纸分类信息，是否确认删除？\n\n分类：${cat.name}`);
           if(!ok) return;
           try{
             await apiPost("/api/patternCategoryDelete", {id: cat.id});
@@ -5996,7 +6048,8 @@ const criticalInput=document.getElementById("criticalInput");
       const selects = [
         document.getElementById("consumeManualCategory"),
         document.getElementById("consumeBatchCategory"),
-        document.getElementById("consumeAiCategory")
+        document.getElementById("consumeAiCategory"),
+        document.getElementById("recordEditCategory")
       ].filter(Boolean);
       const list = Array.isArray(PATTERN_CATEGORIES) ? PATTERN_CATEGORIES : [];
       selects.forEach(select=>{
@@ -6032,6 +6085,13 @@ const criticalInput=document.getElementById("criticalInput");
       const bar = document.getElementById("recordsCategoryBar");
       const listEl = document.getElementById("recordsCategoryList");
       if(!bar || !listEl) return;
+      const list = (PATTERN_CATEGORIES||[]);
+      if(list.length===0){
+        bar.style.display = "none";
+        listEl.innerHTML = "";
+        return;
+      }
+      bar.style.display = (RECORDS_STATE && RECORDS_STATE.active === "consume") ? "" : "none";
       listEl.innerHTML = "";
       const createBtn = (label, id)=>{
         const btn = document.createElement("button");
@@ -6051,7 +6111,7 @@ const criticalInput=document.getElementById("criticalInput");
         return btn;
       };
       listEl.appendChild(createBtn("全部", null));
-      (PATTERN_CATEGORIES||[]).forEach(cat=>{
+      list.forEach(cat=>{
         listEl.appendChild(createBtn(cat.name, cat.id));
       });
     }
@@ -6180,6 +6240,8 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
     const recordEditTitle = document.getElementById("recordEditTitle");
     const recordEditPatternField = document.getElementById("recordEditPatternField");
     const recordEditPatternInput = document.getElementById("recordEditPattern");
+    const recordEditCategoryField = document.getElementById("recordEditCategoryField");
+    const recordEditCategorySelect = document.getElementById("recordEditCategory");
     const recordEditImageField = document.getElementById("recordEditImageField");
     const recordEditImageInput = document.getElementById("recordEditImage");
     const recordEditImageName = document.getElementById("recordEditImageName");
@@ -6238,7 +6300,7 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       const toolbar = recordsOnlyWithPattern ? recordsOnlyWithPattern.closest(".records-toolbar") : null;
       if(toolbar) toolbar.style.display = type==="consume" ? "" : "none";
       const categoryBar = document.getElementById("recordsCategoryBar");
-      if(categoryBar) categoryBar.style.display = type==="consume" ? "" : "none";
+      if(categoryBar) categoryBar.style.display = (type==="consume" && (PATTERN_CATEGORIES||[]).length>0) ? "" : "none";
 
       if(type==="stats") loadAndRenderConsumeStats();
       else loadAndRenderRecordGroups();
@@ -6346,7 +6408,7 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       if(!groups || groups.length===0){
         emptyEl.style.display="block";
         if(type==="consume" && ACTIVE_PATTERN_CATEGORY_ID){
-          emptyEl.innerHTML = `<div class="empty-illus"></div><div class="empty-text">该分类暂无图纸记录</div>`;
+          emptyEl.innerHTML = `<div class="empty-illus"></div><div class="empty-text">暂无图纸记录</div>`;
         }else{
           emptyEl.textContent = "暂无记录";
         }
@@ -6430,10 +6492,14 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
           const main = document.createElement("div");
           main.className = "record-main";
 
+          const head = document.createElement("div");
+          head.className = "record-head";
+
           const title = document.createElement("div");
           title.className = "record-title";
           title.textContent = patternClean || "未命名图纸";
           if(!patternClean) title.classList.add("is-empty");
+          head.appendChild(title);
 
           const metaLine = document.createElement("div");
           metaLine.className = "record-meta-line";
@@ -6455,7 +6521,17 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
           actions.appendChild(btnEdit);
           actions.appendChild(btnToggle);
 
-          main.appendChild(title);
+          if(patternCategoryId){
+            const catName = getPatternCategoryNameById(patternCategoryId);
+            if(catName){
+              const tag = document.createElement("div");
+              tag.className = "pattern-tag";
+              tag.textContent = catName;
+              head.appendChild(tag);
+            }
+          }
+
+          main.appendChild(head);
           main.appendChild(metaLine);
           main.appendChild(actions);
 
@@ -6647,10 +6723,14 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       RECORDS_STATE.pendingEdit = {type, gid, categoryId: (patternCategoryId === null || patternCategoryId === undefined) ? null : String(patternCategoryId)};
       if(recordEditTitle) recordEditTitle.textContent = type==="consume" ? "编辑消耗记录" : "编辑补充记录";
       if(recordEditPatternField) recordEditPatternField.style.display = type==="consume" ? "" : "none";
+      if(recordEditCategoryField) recordEditCategoryField.style.display = type==="consume" ? "" : "none";
       if(recordEditImageField) recordEditImageField.style.display = type==="consume" ? "" : "none";
       if(recordEditPatternInput){
         const p = (pattern==="手动调整") ? "" : String(pattern||"");
         recordEditPatternInput.value = p;
+      }
+      if(recordEditCategorySelect){
+        recordEditCategorySelect.value = RECORDS_STATE.pendingEdit?.categoryId || "";
       }
       if(type==="consume") resetRecordEditImage(patternUrl || "");
       else resetRecordEditImage("");
@@ -6804,6 +6884,13 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
         RECORD_EDIT_IMAGE.removed = true;
         RECORD_EDIT_IMAGE.changed = true;
         updateRecordEditImageUI();
+      });
+    }
+    if(recordEditCategorySelect){
+      recordEditCategorySelect.addEventListener("change", ()=>{
+        if(RECORDS_STATE.pendingEdit && RECORDS_STATE.pendingEdit.type==="consume"){
+          RECORDS_STATE.pendingEdit.categoryId = recordEditCategorySelect.value || null;
+        }
       });
     }
     if(recordEditAddRow) recordEditAddRow.addEventListener("click", ()=>{
