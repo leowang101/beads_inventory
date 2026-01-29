@@ -1227,6 +1227,25 @@ main{
   margin-bottom:6px;
 }
 
+/* 统计页：收紧内容区留白 */
+#pageStats{
+  gap:12px;
+}
+#pageStats .panel{
+  padding:12px 12px 10px;
+}
+#pageStats #recordsDialog .tabs{
+  gap:8px;
+}
+#pageStats #recordsDialog .tab-nav{
+  padding:2px;
+  gap:4px;
+}
+#pageStats #recordsDialog .records-toolbar{
+  margin-top:4px;
+  margin-bottom:4px;
+}
+
 /* iOS 风格开关（15px 高） */
 /* 拼豆记录弹窗：限制最大高度，避免超出屏幕（只影响 #recordsDialog） */
 #recordsDialog{
@@ -1237,11 +1256,6 @@ main{
 #recordsDialog[open]{
   display:flex;
   flex-direction:column;
-}
-#recordsDialog .modal-body{
-  flex: 1 1 auto;
-  overflow:auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 #recordsDialog .check{
@@ -2024,8 +2038,7 @@ body.theme-light #recordsDialog .records-consume .record-thumb::after{
       overflow: visible;
     }
     #consumeDialog .modal-body,
-    #restockDialog .modal-body,
-    #recordsDialog .modal-body{
+    #restockDialog .modal-body{
       overflow: visible;
     }
 
@@ -2395,57 +2408,46 @@ body.theme-light #recordsDialog .records-consume .record-thumb::after{
     <section class="page" id="pageStats" data-page="stats">
 
       <section class="panel" id="recordsDialog">
-        <div class="modal-body">
-          <div class="tabs" id="recordsTabs">
-            <div class="tab-nav">
-              <button type="button" class="tab-btn active" data-tab="records-consume">消耗记录</button>
-              <button type="button" class="tab-btn" data-tab="records-restock">补充记录</button>
-              <button type="button" class="tab-btn" data-tab="records-stats">消耗统计</button>
+        <div class="tabs" id="recordsTabs">
+          <div class="tab-nav">
+            <button type="button" class="tab-btn active" data-tab="records-consume">消耗记录</button>
+            <button type="button" class="tab-btn" data-tab="records-restock">补充记录</button>
+            <button type="button" class="tab-btn" data-tab="records-stats">消耗统计</button>
+          </div>
+
+          <div class="tab-panel active" id="recordsConsumePanel">
+            <div class="records-table records-consume">
+              <div id="recordsConsumeList" class="records-list"></div>
+              <div class="empty" id="recordsConsumeEmpty" style="display:none;">暂无记录</div>
             </div>
+          </div>
 
-            <div class="tab-panel active" id="recordsConsumePanel">
-              <div class="records-toolbar">
-                <span class="meta-chip" id="recordsConsumeTotalChip">总消耗：0</span>
-                <label class="check">
-                  <input type="checkbox" id="recordsOnlyWithPattern" />
-                  <span class="switch" aria-hidden="true"></span>
-                  <span>只看有图纸名称</span>
-                </label>
+          <div class="tab-panel" id="recordsRestockPanel">
+            <div class="records-table records-restock">
+              <div class="records-row records-head">
+                <div>时间</div>
+                <div class="num">总补充</div>
+                <div class="op">操作</div>
               </div>
-
-              <div class="records-table records-consume">
-                <div id="recordsConsumeList" class="records-list"></div>
-                <div class="empty" id="recordsConsumeEmpty" style="display:none;">暂无记录</div>
-              </div>
+              <div id="recordsRestockList" class="records-list"></div>
+              <div class="empty" id="recordsRestockEmpty" style="display:none;">暂无记录</div>
             </div>
+          </div>
 
-            <div class="tab-panel" id="recordsRestockPanel">
-              <div class="records-table records-restock">
-                <div class="records-row records-head">
-                  <div>时间</div>
-                  <div class="num">总补充</div>
-                  <div class="op">操作</div>
-                </div>
-                <div id="recordsRestockList" class="records-list"></div>
-                <div class="empty" id="recordsRestockEmpty" style="display:none;">暂无记录</div>
-              </div>
+          <div class="tab-panel" id="recordsStatsPanel">
+            <div class="records-toolbar stats-toolbar">
+              <span class="meta-chip" id="recordsStatsTotalChip">总消耗：0</span>
+              <span class="meta-chip" id="recordsStatsCountChip">消耗色号：0</span>
             </div>
-
-            <div class="tab-panel" id="recordsStatsPanel">
-              <div class="records-toolbar stats-toolbar">
-                <span class="meta-chip" id="recordsStatsTotalChip">总消耗：0</span>
-                <span class="meta-chip" id="recordsStatsCountChip">消耗色号：0</span>
+            <div class="stats-table">
+              <div class="stats-row stats-head">
+                <div>排名</div>
+                <div>色号</div>
+                <div class="num">消耗</div>
+                <div class="num">当前库存</div>
               </div>
-              <div class="stats-table">
-                <div class="stats-row stats-head">
-                  <div>排名</div>
-                  <div>色号</div>
-                  <div class="num">消耗</div>
-                  <div class="num">当前库存</div>
-                </div>
-                <div id="recordsStatsList" class="stats-list"></div>
-                <div class="empty" id="recordsStatsEmpty" style="display:none;">暂无消耗</div>
-              </div>
+              <div id="recordsStatsList" class="stats-list"></div>
+              <div class="empty" id="recordsStatsEmpty" style="display:none;">暂无消耗</div>
             </div>
           </div>
         </div>
