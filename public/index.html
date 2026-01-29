@@ -439,6 +439,11 @@ main{
       box-shadow: var(--shadow);
       padding:18px 18px 14px;
     }
+    .panel.form-panel{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
     body.theme-light .panel{
       box-shadow: 0 12px 30px rgba(15,23,42,.08);
     }
@@ -855,7 +860,6 @@ main{
       object-fit:contain;
       display:block;
     }
-
     .toast-stack{
       position: fixed;
       right: 16px;
@@ -1197,13 +1201,7 @@ main{
       overflow: hidden;
     }
 
-    /* 只有打开(open)状态才启用 flex 布局，避免关闭后仍被强制显示 */
-    #consumeDialog[open]{
-      display: flex;
-      flex-direction: column;
-    }
-
-    #consumeDialog .modal-body{
+    #consumeDialog .tabs{
       flex: 1 1 auto;
       overflow: auto;
       -webkit-overflow-scrolling: touch;
@@ -1238,8 +1236,28 @@ main{
   gap:8px;
 }
 #pageStats #recordsDialog .tab-nav{
-  padding:2px;
-  gap:4px;
+  padding:4px;
+  gap:6px;
+}
+#pageStats #recordsDialog .tab-nav button{
+  padding:8px 10px;
+  font-size:12px;
+  font-weight:600;
+}
+#pageConsume #consumeDialog .tabs,
+#pageRestock #restockDialog .tabs{
+  gap:8px;
+}
+#pageConsume #consumeDialog .tab-nav,
+#pageRestock #restockDialog .tab-nav{
+  padding:4px;
+  gap:6px;
+}
+#pageConsume #consumeDialog .tab-nav button,
+#pageRestock #restockDialog .tab-nav button{
+  padding:8px 10px;
+  font-size:12px;
+  font-weight:600;
 }
 #pageStats #recordsDialog .records-toolbar{
   margin-top:4px;
@@ -2037,11 +2055,6 @@ body.theme-light #recordsDialog .records-consume .record-thumb::after{
       max-height: none;
       overflow: visible;
     }
-    #consumeDialog .modal-body,
-    #restockDialog .modal-body{
-      overflow: visible;
-    }
-
     .settings-actions{
       display:flex;
       justify-content:flex-end;
@@ -2171,120 +2184,118 @@ body.theme-light #recordsDialog .records-consume .record-thumb::after{
         <div class="page-title">消耗库存</div>
       </div>
 
-      <section class="panel" id="consumeDialog">
-        <div class="modal-body">
-          <div class="tabs" id="consumeTabs">
-            <div class="tab-nav">
-              <button type="button" class="tab-btn" data-tab="consume-ai">AI智能统计</button>
-              <button type="button" class="tab-btn active" data-tab="consume-manual">手动记录</button>
-              <button type="button" class="tab-btn" data-tab="consume-batch">上传文件</button>
+      <section class="panel form-panel" id="consumeDialog">
+        <div class="tabs" id="consumeTabs">
+          <div class="tab-nav">
+            <button type="button" class="tab-btn" data-tab="consume-ai">AI智能统计</button>
+            <button type="button" class="tab-btn active" data-tab="consume-manual">手动记录</button>
+            <button type="button" class="tab-btn" data-tab="consume-batch">上传文件</button>
+          </div>
+          <div class="tab-panel active" id="consumeManualPanel">
+            <div class="modal-field">
+              <label for="consumeManualPattern">图纸名称（选填）</label>
+              <input type="text" id="consumeManualPattern" placeholder="建议填写，20字以内" maxlength="20" />
             </div>
-            <div class="tab-panel active" id="consumeManualPanel">
-              <div class="modal-field">
-                <label for="consumeManualPattern">图纸名称（选填）</label>
-                <input type="text" id="consumeManualPattern" placeholder="建议填写，20字以内" maxlength="20" />
-              </div>
-              <div class="modal-field">
-                <label>上传图纸（选填）</label>
-                <div class="file-upload">
-                  <label class="file-upload-label" for="consumeManualImage">
-                    <span class="file-upload-title">选择图纸</span>
-                    <span class="file-upload-desc">支持 JPG/PNG/WebP，将压缩后上传</span>
-                    <span class="file-upload-filename" id="consumeManualImageName">未选择图纸</span>
-                  </label>
-                  <input type="file" id="consumeManualImage" accept="image/png,image/jpeg,image/webp" />
-                </div>
-              </div>
-              <div class="modal-field">
-                <label>单次最多支持添加 100 条记录，每条记录需填写色号和数量</label>
-                <div class="record-rows" id="consumeManualRows"></div>
-                <div class="help" id="consumeManualSummary" style="margin-top:4px;font-weight:600;">
-                  已填写色号：0 个 · 拼豆合计：0 粒
-                </div>
-              </div>
-              <div class="modal-field">
-                <button id="consumeAddRow" type="button">+ 添加一行</button>
+            <div class="modal-field">
+              <label>上传图纸（选填）</label>
+              <div class="file-upload">
+                <label class="file-upload-label" for="consumeManualImage">
+                  <span class="file-upload-title">选择图纸</span>
+                  <span class="file-upload-desc">支持 JPG/PNG/WebP，将压缩后上传</span>
+                  <span class="file-upload-filename" id="consumeManualImageName">未选择图纸</span>
+                </label>
+                <input type="file" id="consumeManualImage" accept="image/png,image/jpeg,image/webp" />
               </div>
             </div>
+            <div class="modal-field">
+              <label>单次最多支持添加 100 条记录，每条记录需填写色号和数量</label>
+              <div class="record-rows" id="consumeManualRows"></div>
+              <div class="help" id="consumeManualSummary" style="margin-top:4px;font-weight:600;">
+                已填写色号：0 个 · 拼豆合计：0 粒
+              </div>
+            </div>
+            <div class="modal-field">
+              <button id="consumeAddRow" type="button">+ 添加一行</button>
+            </div>
+          </div>
 
-            <div class="tab-panel" id="consumeBatchPanel">
-              <div class="modal-field">
-                <label for="consumeBatchPattern">图纸名称（选填）</label>
-                <input type="text" id="consumeBatchPattern" placeholder="建议填写，20字以内" maxlength="20" />
-                <div class="help">图纸名称将在色号的消耗明细中展示</div>
+          <div class="tab-panel" id="consumeBatchPanel">
+            <div class="modal-field">
+              <label for="consumeBatchPattern">图纸名称（选填）</label>
+              <input type="text" id="consumeBatchPattern" placeholder="建议填写，20字以内" maxlength="20" />
+              <div class="help">图纸名称将在色号的消耗明细中展示</div>
+            </div>
+            <div class="modal-field">
+              <label>上传图纸（选填）</label>
+              <div class="file-upload">
+                <label class="file-upload-label" for="consumeBatchImage">
+                  <span class="file-upload-title">选择图纸</span>
+                  <span class="file-upload-desc">支持 JPG/PNG/WebP，将压缩后上传</span>
+                  <span class="file-upload-filename" id="consumeBatchImageName">未选择图纸</span>
+                </label>
+                <input type="file" id="consumeBatchImage" accept="image/png,image/jpeg,image/webp" />
               </div>
-              <div class="modal-field">
-                <label>上传图纸（选填）</label>
-                <div class="file-upload">
-                  <label class="file-upload-label" for="consumeBatchImage">
-                    <span class="file-upload-title">选择图纸</span>
-                    <span class="file-upload-desc">支持 JPG/PNG/WebP，将压缩后上传</span>
-                    <span class="file-upload-filename" id="consumeBatchImageName">未选择图纸</span>
-                  </label>
-                  <input type="file" id="consumeBatchImage" accept="image/png,image/jpeg,image/webp" />
-                </div>
+            </div>
+            <div class="modal-field">
+              <label>上传 CSV 格式文件</label>
+              <div class="file-upload">
+                <label class="file-upload-label" for="consumeFile">
+                  <span class="file-upload-title">选择 CSV 文件</span>
+                  <span class="file-upload-desc">CSV 第一列=色号，第二列=消耗数量，示例：F11,500</span>
+                  <span class="file-upload-filename" id="consumeFileName">未选择文件</span>
+                </label>
+                <input type="file" id="consumeFile" accept=".csv,text/csv" />
               </div>
-              <div class="modal-field">
-                <label>上传 CSV 格式文件</label>
-                <div class="file-upload">
-                  <label class="file-upload-label" for="consumeFile">
-                    <span class="file-upload-title">选择 CSV 文件</span>
-                    <span class="file-upload-desc">CSV 第一列=色号，第二列=消耗数量，示例：F11,500</span>
-                    <span class="file-upload-filename" id="consumeFileName">未选择文件</span>
-                  </label>
-                  <input type="file" id="consumeFile" accept=".csv,text/csv" />
-                </div>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="consumeAiPanel">
+            <div class="modal-field">
+              <label for="consumeAiPattern">图纸名称（选填）</label>
+              <input type="text" id="consumeAiPattern" placeholder="建议填写，20字以内" maxlength="20" />
+              <div class="help">图纸名称将在色号的消耗明细中展示</div>
+            </div>
+
+            <div class="modal-field">
+              <div class="file-upload">
+                <label class="file-upload-label" for="consumeAiImage">
+                  <span class="file-upload-title">选择图纸</span>
+                  <span class="file-upload-desc">支持 JPG/PNG/WebP，仅支持底部有色号统计的图纸</span>
+                  <span class="file-upload-filename" id="consumeAiImageName">未选择图纸</span>
+                </label>
+                <input type="file" id="consumeAiImage" accept="image/png,image/jpeg,image/webp" />
               </div>
             </div>
 
-            <div class="tab-panel" id="consumeAiPanel">
-              <div class="modal-field">
-                <label for="consumeAiPattern">图纸名称（选填）</label>
-                <input type="text" id="consumeAiPattern" placeholder="建议填写，20字以内" maxlength="20" />
-                <div class="help">图纸名称将在色号的消耗明细中展示</div>
+            <div class="modal-field">
+              <div class="quick-group">
+                <button id="consumeAiRecognize" type="button" class="btn-secondary">开始识别</button>
+                <button id="consumeAiClear" type="button" class="btn-ghost ai-after" style="display:none;">清空结果</button>
+                <button id="consumeAiAddRow" type="button" class="btn-ghost ai-after" style="display:none;">+ 添加一行</button>
               </div>
+              <div class="help">系统将调用AI大模型自动统计色号和数量，预计需要15秒</div>
+            </div>
 
-              <div class="modal-field">
-                <div class="file-upload">
-                  <label class="file-upload-label" for="consumeAiImage">
-                    <span class="file-upload-title">选择图纸</span>
-                    <span class="file-upload-desc">支持 JPG/PNG/WebP，仅支持底部有色号统计的图纸</span>
-                    <span class="file-upload-filename" id="consumeAiImageName">未选择图纸</span>
-                  </label>
-                  <input type="file" id="consumeAiImage" accept="image/png,image/jpeg,image/webp" />
-                </div>
+            <div class="modal-field" id="consumeAiResultWrap" style="display:none;">
+              <label>识别结果（可编辑）</label>
+              <div class="ai-result-box">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 110px;">色号</th>
+                      <th style="width: 110px;">数量</th>
+                      <th style="width: 90px;">置信度</th>
+                      <th style="width: 80px;">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="consumeAiTableBody"></tbody>
+                </table>
               </div>
-
-              <div class="modal-field">
-                <div class="quick-group">
-                  <button id="consumeAiRecognize" type="button" class="btn-secondary">开始识别</button>
-                  <button id="consumeAiClear" type="button" class="btn-ghost ai-after" style="display:none;">清空结果</button>
-                  <button id="consumeAiAddRow" type="button" class="btn-ghost ai-after" style="display:none;">+ 添加一行</button>
-                </div>
-                <div class="help">系统将调用AI大模型自动统计色号和数量，预计需要15秒</div>
+              <div class="empty" id="consumeAiEmpty" style="display:none;">暂无识别结果</div>
+              <div class="help" id="consumeAiSummary" style="margin-top:8px;font-weight:600;">
+                已识别色号：0 个 · 拼豆合计：0 粒
               </div>
-
-              <div class="modal-field" id="consumeAiResultWrap" style="display:none;">
-                <label>识别结果（可编辑）</label>
-                <div class="ai-result-box">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th style="width: 110px;">色号</th>
-                        <th style="width: 110px;">数量</th>
-                        <th style="width: 90px;">置信度</th>
-                        <th style="width: 80px;">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody id="consumeAiTableBody"></tbody>
-                  </table>
-                </div>
-                <div class="empty" id="consumeAiEmpty" style="display:none;">暂无识别结果</div>
-                <div class="help" id="consumeAiSummary" style="margin-top:8px;font-weight:600;">
-                  已识别色号：0 个 · 拼豆合计：0 粒
-                </div>
-                <div class="help" id="consumeAiUnknown" style="margin-top:6px;"></div>
-              </div>
+              <div class="help" id="consumeAiUnknown" style="margin-top:6px;"></div>
             </div>
           </div>
         </div>
@@ -2300,50 +2311,48 @@ body.theme-light #recordsDialog .records-consume .record-thumb::after{
         <div class="page-title">补充库存</div>
       </div>
 
-      <section class="panel" id="restockDialog">
-        <div class="modal-body">
-          <div class="tabs" id="restockTabs">
-            <div class="tab-nav">
-              <button type="button" class="tab-btn active" data-tab="restock-manual">手动记录</button>
-              <button type="button" class="tab-btn" data-tab="restock-bulk">批量记录</button>
-              <button type="button" class="tab-btn" data-tab="restock-batch">上传文件</button>
-            </div>
+      <section class="panel form-panel" id="restockDialog">
+        <div class="tabs" id="restockTabs">
+          <div class="tab-nav">
+            <button type="button" class="tab-btn active" data-tab="restock-manual">手动记录</button>
+            <button type="button" class="tab-btn" data-tab="restock-bulk">批量记录</button>
+            <button type="button" class="tab-btn" data-tab="restock-batch">上传文件</button>
+          </div>
 
-            <div class="tab-panel active" id="restockManualPanel">
-              <div class="modal-field">
-                <label>手动添加补充记录</label>
-                <div class="record-rows" id="restockManualRows"></div>
-                <div class="help">
-                  单次最多支持添加 100 条记录，每条记录需填写色号和数量
-                </div>
-              </div>
-              <div class="modal-field">
-                <button id="restockAddRow" type="button">+ 添加一行</button>
+          <div class="tab-panel active" id="restockManualPanel">
+            <div class="modal-field">
+              <label>手动添加补充记录</label>
+              <div class="record-rows" id="restockManualRows"></div>
+              <div class="help">
+                单次最多支持添加 100 条记录，每条记录需填写色号和数量
               </div>
             </div>
-
-            <div class="tab-panel" id="restockBulkPanel">
-              <div class="modal-field">
-                <div class="help">输入补充的数量，不需要补充的色号留空即可</div>
-                <div class="bulk-top">
-                  <button id="restockBulkAddAll" type="button">一键添加</button>
-                  <div class="bulk-meta" id="restockBulkMeta">已填写色号：0个 · 拼豆合计：0粒</div>
-                </div>
-                <div class="bulk-grid" id="restockBulkGrid"></div>
-              </div>
+            <div class="modal-field">
+              <button id="restockAddRow" type="button">+ 添加一行</button>
             </div>
+          </div>
 
-            <div class="tab-panel" id="restockBatchPanel">
-              <div class="modal-field">
-                <label>上传 CSV 格式文件</label>
-                <div class="file-upload">
-                  <label class="file-upload-label" for="restockFile">
-                    <span class="file-upload-title">选择 CSV 文件</span>
-                    <span class="file-upload-desc">CSV 第一列=色号，第二列=补充数量，示例：F11,500</span>
-                    <span class="file-upload-filename" id="restockFileName">未选择文件</span>
-                  </label>
-                  <input type="file" id="restockFile" accept=".csv,text/csv" />
-                </div>
+          <div class="tab-panel" id="restockBulkPanel">
+            <div class="modal-field">
+              <div class="help">输入补充的数量，不需要补充的色号留空即可</div>
+              <div class="bulk-top">
+                <button id="restockBulkAddAll" type="button">一键添加</button>
+                <div class="bulk-meta" id="restockBulkMeta">已填写色号：0个 · 拼豆合计：0粒</div>
+              </div>
+              <div class="bulk-grid" id="restockBulkGrid"></div>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="restockBatchPanel">
+            <div class="modal-field">
+              <label>上传 CSV 格式文件</label>
+              <div class="file-upload">
+                <label class="file-upload-label" for="restockFile">
+                  <span class="file-upload-title">选择 CSV 文件</span>
+                  <span class="file-upload-desc">CSV 第一列=色号，第二列=补充数量，示例：F11,500</span>
+                  <span class="file-upload-filename" id="restockFileName">未选择文件</span>
+                </label>
+                <input type="file" id="restockFile" accept=".csv,text/csv" />
               </div>
             </div>
           </div>
@@ -2361,46 +2370,44 @@ body.theme-light #recordsDialog .records-consume .record-thumb::after{
         <div class="page-title">图纸消耗计算</div>
       </div>
 
-      <section class="panel" id="patternCalcDialog">
-        <div class="modal-body">
-          <div class="modal-field">
-            <div class="file-upload">
-              <label class="file-upload-label" for="patternCalcImage">
-                <span class="file-upload-title">选择图纸</span>
-                <span class="file-upload-desc">支持 JPG/PNG，仅支持底部有色号统计的图纸</span>
-                <span class="file-upload-filename" id="patternCalcImageName">未选择图纸</span>
-              </label>
-              <input type="file" id="patternCalcImage" accept="image/*" />
-            </div>
+      <section class="panel form-panel" id="patternCalcDialog">
+        <div class="modal-field">
+          <div class="file-upload">
+            <label class="file-upload-label" for="patternCalcImage">
+              <span class="file-upload-title">选择图纸</span>
+              <span class="file-upload-desc">支持 JPG/PNG，仅支持底部有色号统计的图纸</span>
+              <span class="file-upload-filename" id="patternCalcImageName">未选择图纸</span>
+            </label>
+            <input type="file" id="patternCalcImage" accept="image/*" />
           </div>
+        </div>
 
-          <div class="modal-field">
-            <div class="quick-group">
-              <button id="patternCalcRecognize" type="button" class="btn-secondary">开始计算</button>
-              <button id="patternCalcClear" type="button" class="btn-ghost" style="display:none;">清空结果</button>
-            </div>
-            <div class="help">系统将调用AI统计色号与数量，并与当前库存对比（支持多次补充计算，结果自动合并）</div>
+        <div class="modal-field">
+          <div class="quick-group">
+            <button id="patternCalcRecognize" type="button" class="btn-secondary">开始计算</button>
+            <button id="patternCalcClear" type="button" class="btn-ghost" style="display:none;">清空结果</button>
           </div>
+          <div class="help">系统将调用AI统计色号与数量，并与当前库存对比（支持多次补充计算，结果自动合并）</div>
+        </div>
 
-          <div class="modal-field" id="patternCalcResultWrap" style="display:none;">
-            <label>计算结果（按消耗数量从高到低排序）</label>
-            <div class="calc-toolbar">
-              <span class="meta-chip" id="patternCalcTotalChip">总消耗：0</span>
-              <span class="meta-chip" id="patternCalcCountChip">色号：0</span>
-              <span class="meta-chip" id="patternCalcShortChip">不足：0</span>
-            </div>
-            <div class="calc-table">
-              <div class="calc-row calc-head">
-                <div>色号</div>
-                <div class="num">需要消耗</div>
-                <div class="num">当前库存</div>
-                <div class="num">拼完剩余</div>
-              </div>
-              <div id="patternCalcList" class="calc-list"></div>
-              <div class="empty" id="patternCalcEmpty" style="display:none;">暂无识别结果</div>
-            </div>
-            <div class="help" id="patternCalcUnknown" style="margin-top:6px;"></div>
+        <div class="modal-field" id="patternCalcResultWrap" style="display:none;">
+          <label>计算结果（按消耗数量从高到低排序）</label>
+          <div class="calc-toolbar">
+            <span class="meta-chip" id="patternCalcTotalChip">总消耗：0</span>
+            <span class="meta-chip" id="patternCalcCountChip">色号：0</span>
+            <span class="meta-chip" id="patternCalcShortChip">不足：0</span>
           </div>
+          <div class="calc-table">
+            <div class="calc-row calc-head">
+              <div>色号</div>
+              <div class="num">需要消耗</div>
+              <div class="num">当前库存</div>
+              <div class="num">拼完剩余</div>
+            </div>
+            <div id="patternCalcList" class="calc-list"></div>
+            <div class="empty" id="patternCalcEmpty" style="display:none;">暂无识别结果</div>
+          </div>
+          <div class="help" id="patternCalcUnknown" style="margin-top:6px;"></div>
         </div>
       </section>
     </section>
