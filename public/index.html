@@ -3855,7 +3855,7 @@ function formatTimeSecondParts(iso){
     }
     async function compressImageFile(file){
       const img = await loadImageFromFile(file);
-      const maxDim = 2048;
+      const maxDim = 1024;
       const scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1));
       const targetW = Math.max(1, Math.round((img.width || 1) * scale));
       const targetH = Math.max(1, Math.round((img.height || 1) * scale));
@@ -3867,7 +3867,7 @@ function formatTimeSecondParts(iso){
         ctx.drawImage(img, 0, 0, targetW, targetH);
       }
       const targetType = getTargetImageType(file);
-      const quality = (targetType === "image/jpeg" || targetType === "image/webp") ? 0.85 : undefined;
+      const quality = (targetType === "image/jpeg" || targetType === "image/webp") ? 0.5 : undefined;
       const blob = await new Promise(resolve=>canvas.toBlob(resolve, targetType, quality));
       if(!blob){
         return { blob: file, ext: inferImageExt(file), mime: file.type || targetType };
