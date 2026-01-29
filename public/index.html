@@ -649,6 +649,19 @@ main{
         min-width:0;
       }
     }
+    /* 编辑消耗记录弹窗：按钮之间加间距 */
+    #recordEditDialog .modal-foot{
+      gap:12px;
+    }
+    @media (max-width: 560px){
+      #recordEditDialog .modal-foot{
+        gap:10px;
+      }
+      #recordEditDialog .modal-foot button{
+        flex:1 1 0;
+        min-width:0;
+      }
+    }
 .help{
       font-size:11px; color:var(--muted);
     }
@@ -2648,7 +2661,6 @@ body.theme-light #recordsDialog .records-consume .record-thumb::after{
         <div class="pattern-preview" id="recordEditImagePreview" style="display:none;">
           <img id="recordEditImagePreviewImg" alt="图纸预览" />
         </div>
-        <div class="help" style="margin-top:6px;">重新上传会替换当前图纸</div>
         <button id="recordEditImageClear" class="btn-ghost" type="button">移除图纸</button>
       </div>
       <div class="modal-field">
@@ -6125,6 +6137,7 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       if(recordEditImageClear){
         const canClear = hasFile || (!!RECORD_EDIT_IMAGE.originalUrl && !RECORD_EDIT_IMAGE.removed);
         recordEditImageClear.disabled = !canClear;
+        recordEditImageClear.style.display = canClear ? "" : "none";
       }
     }
     function resetRecordEditImage(url){
