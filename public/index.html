@@ -825,6 +825,23 @@ main{
       margin-top:6px;
       font-size:11px;
     }
+    .pattern-preview{
+      margin-top:8px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: var(--panel-2);
+      padding:6px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:120px;
+    }
+    .pattern-preview img{
+      max-width:100%;
+      max-height:180px;
+      object-fit:contain;
+      display:block;
+    }
 
     .toast-stack{
       position: fixed;
@@ -1273,6 +1290,177 @@ body.theme-light #recordsDialog .check .switch{
 
 /* 列表字号/布局更贴近「色号-查看明细」弹窗 */
 #recordsDialog .records-table{margin-top:4px;}
+#recordsDialog .records-consume .records-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+#recordsDialog .records-consume .record-card{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:flex-start;
+  padding:12px;
+  border-radius: var(--radius-md);
+  border:1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.02), transparent 40%), var(--panel-2);
+}
+#recordsDialog .records-consume .record-thumb{
+  width:80px;
+  height:80px;
+  border-radius:16px;
+  border:1px solid var(--border);
+  background:
+    linear-gradient(135deg, rgba(125,211,252,.18), rgba(167,139,250,.18)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.08) 0, rgba(255,255,255,.08) 1px, transparent 1px, transparent 10px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0, rgba(255,255,255,.08) 1px, transparent 1px, transparent 10px),
+    var(--panel-2);
+  position:relative;
+  overflow:hidden;
+  flex:0 0 auto;
+  align-self:center;
+}
+#recordsDialog .records-consume .record-thumb.has-image{
+   background: var(--panel-2);
+ }
+body.theme-light #recordsDialog .records-consume .record-thumb{
+  background:
+    linear-gradient(135deg, rgba(14,165,233,.12), rgba(99,102,241,.12)),
+    repeating-linear-gradient(0deg, rgba(15,23,42,.08) 0, rgba(15,23,42,.08) 1px, transparent 1px, transparent 10px),
+    repeating-linear-gradient(90deg, rgba(15,23,42,.08) 0, rgba(15,23,42,.08) 1px, transparent 1px, transparent 10px),
+    var(--panel-2);
+}
+body.theme-light #recordsDialog .records-consume .record-thumb.has-image{
+  background: var(--panel-2);
+}
+#recordsDialog .records-consume .record-thumb.has-image::after{
+  display:none;
+}
+#recordsDialog .records-consume .record-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+#recordsDialog .records-consume .record-thumb::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:32px;
+  height:32px;
+  border-radius:9px;
+  border:1px dashed rgba(255,255,255,.45);
+  transform: translate(-50%,-50%);
+  background: rgba(255,255,255,.05);
+}
+body.theme-light #recordsDialog .records-consume .record-thumb::after{
+  border-color: rgba(15,23,42,.2);
+  background: rgba(15,23,42,.03);
+}
+#recordsDialog .records-consume .record-main{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  flex:1 1 0;
+  min-width:0;
+}
+#recordsDialog .records-consume .record-title{
+  font-size:13px;
+  font-weight:600;
+  min-width:0;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+#recordsDialog .records-consume .record-title.is-empty{
+  color:var(--muted);
+  font-weight:500;
+}
+#recordsDialog .records-consume .record-meta-line{
+  display:flex;
+  align-items:center;
+  flex-wrap:nowrap;
+  min-width:0;
+  line-height:1.2;
+  font-variant-numeric: tabular-nums;
+  color:var(--muted);
+  font-size:12px;
+  white-space:nowrap;
+}
+#recordsDialog .records-consume .record-time{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+}
+#recordsDialog .records-consume .record-time .dt-date{white-space:nowrap;}
+#recordsDialog .records-consume .record-time .dt-time{white-space:nowrap;}
+#recordsDialog .records-consume .record-total{
+  margin-left:8px;
+  padding-left:8px;
+  border-left:1px solid var(--border);
+  white-space:nowrap;
+}
+#recordsDialog .records-consume .record-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+  flex-wrap:wrap;
+  padding-top:10px;
+  margin-top:2px;
+  border-top:1px solid var(--border);
+  width:100%;
+}
+#recordsDialog .records-consume .record-actions .link-action{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:0 8px;
+  min-width:54px;
+  height:26px;
+  justify-content:center;
+  border-radius:999px;
+  border:1px solid var(--accent);
+  background:transparent;
+  color:var(--accent);
+  font-size:12px;
+  line-height:1;
+  text-decoration:none;
+}
+#recordsDialog .records-consume .record-actions .link-action:hover{
+  text-decoration:none;
+}
+#recordsDialog .record-toggle-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:2px;
+}
+#recordsDialog .record-toggle-btn .toggle-icon{
+  display:inline-flex;
+  align-items:center;
+}
+#recordsDialog .record-toggle-btn svg{
+  width:14px;
+  height:14px;
+  display:block;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#recordsDialog .records-consume .record-actions .record-toggle-btn svg{
+  width:12px;
+  height:12px;
+}
+#recordsDialog .records-consume .record-detail{
+  flex:1 1 100%;
+  padding:10px 0 0;
+  border-top:1px solid var(--border);
+  border-bottom:none;
+}
 #recordsDialog .records-row .time{
   display:flex;
   flex-direction:column;
@@ -1349,6 +1537,14 @@ body.theme-light #recordsDialog .check .switch{
 /* 移动端：压缩时间/总数列，给图纸名称更多空间，确保两个操作按钮都在屏内 */
 @media (max-width: 560px){
   #recordsDialog .records-row{gap:8px; padding:9px 0;}
+  #recordsDialog .records-consume .record-card{padding:10px; gap:10px;}
+  #recordsDialog .records-consume .record-thumb{width:72px; height:72px; border-radius:14px;}
+  #recordsDialog .records-consume .record-title{font-size:12px;}
+  #recordsDialog .records-consume .record-meta-line{font-size:11px;}
+  #recordsDialog .records-consume .record-total{margin-left:6px; padding-left:6px;}
+  #recordsDialog .records-consume .record-actions{gap:8px; padding-top:8px;}
+  #recordsDialog .records-consume .record-actions .link-action{padding:0 7px; min-width:50px; height:24px; font-size:11px;}
+  #recordsDialog .records-consume .record-actions .record-toggle-btn svg{width:11px; height:11px;}
   #recordsDialog .records-consume .records-row{grid-template-columns:85px minmax(0,1fr) 48px 70px;}
   #recordsDialog .records-restock .records-row{grid-template-columns:120px 70px 1fr;}
 
@@ -1402,7 +1598,7 @@ body.theme-light #recordsDialog .check .switch{
 
 /* 展开明细：移动端更紧凑，一行 3 个 */
 #recordsDialog .record-detail{padding:10px 0 14px;border-bottom:1px solid var(--border);}
-#recordsDialog .record-pill-wrap{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:14px;padding:12px 12px;}
+#recordsDialog .record-pill-wrap{background:transparent;border:none;border-radius:0;padding:0;}
 #recordsDialog .record-pill-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 10px;}
 #recordsDialog .record-pill{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border);}
 #recordsDialog .record-dot{width:12px;height:12px;border-radius:999px;border:1px solid rgba(255,255,255,.15);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);flex:0 0 auto;}
@@ -1449,7 +1645,7 @@ body.theme-light #recordsDialog .check .switch{
 
 @media (max-width: 560px){
   #recordsDialog .record-detail{padding:8px 0 12px;}
-  #recordsDialog .record-pill-wrap{padding:10px 10px; border-radius:12px;}
+  #recordsDialog .record-pill-wrap{padding:0; border-radius:0;}
   #recordsDialog .record-pill-grid{grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px 8px;}
   #recordsDialog .record-pill{gap:8px; padding:7px 8px; border-radius:11px;}
   #recordsDialog .record-dot{width:14px; height:14px;}
@@ -1963,6 +2159,17 @@ body.theme-light #recordsDialog .check .switch{
                 <input type="text" id="consumeManualPattern" placeholder="建议填写，20字以内" maxlength="20" />
               </div>
               <div class="modal-field">
+                <label>上传图纸（选填）</label>
+                <div class="file-upload">
+                  <label class="file-upload-label" for="consumeManualImage">
+                    <span class="file-upload-title">选择图纸</span>
+                    <span class="file-upload-desc">支持 JPG/PNG/WebP，将压缩后上传</span>
+                    <span class="file-upload-filename" id="consumeManualImageName">未选择图纸</span>
+                  </label>
+                  <input type="file" id="consumeManualImage" accept="image/png,image/jpeg,image/webp" />
+                </div>
+              </div>
+              <div class="modal-field">
                 <label>单次最多支持添加 100 条记录，每条记录需填写色号和数量</label>
                 <div class="record-rows" id="consumeManualRows"></div>
                 <div class="help" id="consumeManualSummary" style="margin-top:4px;font-weight:600;">
@@ -1979,6 +2186,17 @@ body.theme-light #recordsDialog .check .switch{
                 <label for="consumeBatchPattern">图纸名称（选填）</label>
                 <input type="text" id="consumeBatchPattern" placeholder="建议填写，20字以内" maxlength="20" />
                 <div class="help">图纸名称将在色号的消耗明细中展示</div>
+              </div>
+              <div class="modal-field">
+                <label>上传图纸（选填）</label>
+                <div class="file-upload">
+                  <label class="file-upload-label" for="consumeBatchImage">
+                    <span class="file-upload-title">选择图纸</span>
+                    <span class="file-upload-desc">支持 JPG/PNG/WebP，将压缩后上传</span>
+                    <span class="file-upload-filename" id="consumeBatchImageName">未选择图纸</span>
+                  </label>
+                  <input type="file" id="consumeBatchImage" accept="image/png,image/jpeg,image/webp" />
+                </div>
               </div>
               <div class="modal-field">
                 <label>上传 CSV 格式文件</label>
@@ -2004,10 +2222,10 @@ body.theme-light #recordsDialog .check .switch{
                 <div class="file-upload">
                   <label class="file-upload-label" for="consumeAiImage">
                     <span class="file-upload-title">选择图纸</span>
-                    <span class="file-upload-desc">支持 JPG/PNG，仅支持底部有色号统计的图纸</span>
+                    <span class="file-upload-desc">支持 JPG/PNG/WebP，仅支持底部有色号统计的图纸</span>
                     <span class="file-upload-filename" id="consumeAiImageName">未选择图纸</span>
                   </label>
-                  <input type="file" id="consumeAiImage" accept="image/*" />
+                  <input type="file" id="consumeAiImage" accept="image/png,image/jpeg,image/webp" />
                 </div>
               </div>
 
@@ -2183,12 +2401,6 @@ body.theme-light #recordsDialog .check .switch{
               </div>
 
               <div class="records-table records-consume">
-                <div class="records-row records-head">
-                  <div>时间</div>
-                  <div>图纸名称</div>
-                  <div class="num">总消耗</div>
-                  <div class="op">操作</div>
-                </div>
                 <div id="recordsConsumeList" class="records-list"></div>
                 <div class="empty" id="recordsConsumeEmpty" style="display:none;">暂无记录</div>
               </div>
@@ -2423,6 +2635,22 @@ body.theme-light #recordsDialog .check .switch{
         <label for="recordEditPattern">图纸名称（选填）</label>
         <input type="text" id="recordEditPattern" placeholder="建议填写，20字以内" maxlength="20" />
       </div>
+      <div class="modal-field" id="recordEditImageField">
+        <label>图纸图片（选填）</label>
+        <div class="file-upload">
+          <label class="file-upload-label" for="recordEditImage">
+            <span class="file-upload-title">重新上传图纸</span>
+            <span class="file-upload-desc">支持 JPG/PNG/WebP，将压缩后上传</span>
+            <span class="file-upload-filename" id="recordEditImageName">未选择图纸</span>
+          </label>
+          <input type="file" id="recordEditImage" accept="image/png,image/jpeg,image/webp" />
+        </div>
+        <div class="pattern-preview" id="recordEditImagePreview" style="display:none;">
+          <img id="recordEditImagePreviewImg" alt="图纸预览" />
+        </div>
+        <div class="help" style="margin-top:6px;">重新上传会替换当前图纸</div>
+        <button id="recordEditImageClear" class="btn-ghost" type="button">移除图纸</button>
+      </div>
       <div class="modal-field">
         <label>色号与数量</label>
         <div class="record-rows" id="recordEditRows"></div>
@@ -2538,6 +2766,7 @@ body.theme-light #recordsDialog .check .switch{
 
   <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/ali-oss@6.20.0/dist/aliyun-oss-sdk.min.js"></script>
   <script>
 const API_BASE = window.location.origin;
 
@@ -3537,6 +3766,151 @@ function formatTimeSecondParts(iso){
       return res.json();
     }
 
+    // ----- OSS upload helpers (STS) -----
+    const OSS_STATE = {
+      client: null,
+      expiration: 0,
+      uploadPrefix: "",
+      cdnBaseUrl: "https://img.leobeads.xyz"
+    };
+    const OSS_ALLOWED_TYPES = new Set(["image/jpeg","image/png","image/webp"]);
+    const OSS_ALLOWED_EXT = new Set(["jpg","jpeg","png","webp"]);
+
+    function normalizeUploadPrefix(prefix){
+      const base = String(prefix || "").replace(/^\/+|\/+$/g, "");
+      return base ? `${base}/` : "";
+    }
+    function inferImageExt(file){
+      const name = String(file?.name || "");
+      const m = name.match(/\.([a-zA-Z0-9]+)$/);
+      let ext = m ? m[1].toLowerCase() : "";
+      if(ext === "jpeg") ext = "jpg";
+      if(OSS_ALLOWED_EXT.has(ext)) return ext;
+      const mime = String(file?.type || "").toLowerCase();
+      if(mime.includes("jpeg")) return "jpg";
+      if(mime.includes("png")) return "png";
+      if(mime.includes("webp")) return "webp";
+      return "jpg";
+    }
+    function isAllowedImageFile(file){
+      if(!file) return false;
+      const mime = String(file.type || "").toLowerCase();
+      if(OSS_ALLOWED_TYPES.has(mime)) return true;
+      const ext = inferImageExt(file);
+      return OSS_ALLOWED_EXT.has(ext);
+    }
+    function getTargetImageType(file){
+      const mime = String(file?.type || "").toLowerCase();
+      if(mime === "image/webp") return "image/webp";
+      if(mime === "image/png") return "image/png";
+      return "image/jpeg";
+    }
+    function newUploadUuid(){
+      try{
+        if(window.crypto && typeof window.crypto.randomUUID === "function"){
+          return window.crypto.randomUUID();
+        }
+      }catch{}
+      return Math.random().toString(16).slice(2) + "-" + Math.random().toString(16).slice(2);
+    }
+    function buildDateStamp(d){
+      return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}`;
+    }
+    function buildObjectKey(prefix, ext){
+      const now = new Date();
+      const datePart = buildDateStamp(now);
+      const ts = Date.now();
+      const id = newUploadUuid();
+      const safePrefix = normalizeUploadPrefix(prefix);
+      return `${safePrefix}${datePart}/${ts}-${id}.${ext || "jpg"}`;
+    }
+    function loadImageFromFile(file){
+      return new Promise((resolve, reject)=>{
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = ()=>{
+          URL.revokeObjectURL(url);
+          resolve(img);
+        };
+        img.onerror = ()=>{
+          URL.revokeObjectURL(url);
+          reject(new Error("读取图片失败"));
+        };
+        img.src = url;
+      });
+    }
+    async function compressImageFile(file){
+      const img = await loadImageFromFile(file);
+      const maxDim = 2048;
+      const scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1));
+      const targetW = Math.max(1, Math.round((img.width || 1) * scale));
+      const targetH = Math.max(1, Math.round((img.height || 1) * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext("2d");
+      if(ctx){
+        ctx.drawImage(img, 0, 0, targetW, targetH);
+      }
+      const targetType = getTargetImageType(file);
+      const quality = (targetType === "image/jpeg" || targetType === "image/webp") ? 0.85 : undefined;
+      const blob = await new Promise(resolve=>canvas.toBlob(resolve, targetType, quality));
+      if(!blob){
+        return { blob: file, ext: inferImageExt(file), mime: file.type || targetType };
+      }
+      const ext = targetType === "image/webp" ? "webp" : (targetType === "image/png" ? "png" : "jpg");
+      return { blob, ext, mime: targetType };
+    }
+    async function fetchOssSts(){
+      const res = await apiGet("/api/oss/sts");
+      const data = res?.data || res;
+      if(!data || !data.accessKeyId || !data.accessKeySecret || !data.securityToken){
+        throw new Error("OSS 凭证获取失败");
+      }
+      return data;
+    }
+    async function ensureOssClient(){
+      if(!IS_LOGGED_IN) throw new Error("请登录后上传图纸");
+      if(!window.OSS) throw new Error("OSS SDK 未加载");
+      const now = Date.now();
+      if(OSS_STATE.client && OSS_STATE.expiration - now > 60 * 1000){
+        return OSS_STATE;
+      }
+      const data = await fetchOssSts();
+      OSS_STATE.client = new window.OSS({
+        region: data.region,
+        bucket: data.bucket,
+        endpoint: data.endpoint,
+        cname: !!data.cname,
+        secure: true,
+        accessKeyId: data.accessKeyId,
+        accessKeySecret: data.accessKeySecret,
+        stsToken: data.securityToken
+      });
+      OSS_STATE.expiration = Date.parse(data.expiration || "") || 0;
+      OSS_STATE.uploadPrefix = String(data.uploadPrefix || "");
+      OSS_STATE.cdnBaseUrl = String(data.cdnBaseUrl || OSS_STATE.cdnBaseUrl);
+      return OSS_STATE;
+    }
+    async function uploadPatternImage(file){
+      if(!file) return null;
+      if(!isAllowedImageFile(file)) throw new Error("仅支持 JPG/PNG/WebP 图片");
+      const oss = await ensureOssClient();
+      const prepared = await compressImageFile(file);
+      const objectKey = buildObjectKey(oss.uploadPrefix, prepared.ext);
+      const mime = prepared.mime || file.type || "image/jpeg";
+      const result = await oss.client.multipartUpload(objectKey, prepared.blob, { mime });
+      const base = String(oss.cdnBaseUrl || "https://img.leobeads.xyz").replace(/\/+$/g, "");
+      const cdnUrl = `${base}/${objectKey}`;
+      return {
+        objectKey,
+        cdnUrl,
+        etag: result?.etag || "",
+        size: prepared.blob?.size || file.size || 0,
+        mime
+      };
+    }
+
 
   // ----- modal helpers (do NOT use dialog.showModal; keep toast above overlay) -----
   let __backdrop = null;
@@ -3662,6 +4036,8 @@ function toast(message,type="success"){
       switch(name){
         case "chevronDown":
           return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg>';
+        case "chevronUp":
+          return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 14l-6-6-6 6"/></svg>';
         case "chevronRight":
           return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6l6 6-6 6"/></svg>';
         default:
@@ -4306,13 +4682,38 @@ function toast(message,type="success"){
       if(summary) summary.textContent=`已填写色号：${codes.size} 个 · 拼豆合计：${total} 粒`;
     }
 
+    function updateImageInputLabel(input, labelEl){
+      if(!input || !labelEl) return;
+      const file = input.files?.[0];
+      if(!file){
+        labelEl.textContent = "未选择图纸";
+        return;
+      }
+      if(!isAllowedImageFile(file)){
+        toast("仅支持 JPG/PNG/WebP 图片","error");
+        input.value = "";
+        labelEl.textContent = "未选择图纸";
+        return;
+      }
+      labelEl.textContent = file.name || "已选择图纸";
+    }
+
+    async function maybeUploadPatternImage(file){
+      if(!file) return null;
+      return await uploadPatternImage(file);
+    }
+
     // 记录消耗
     const consumeDialog=document.getElementById("consumeDialog");
     const consumeManualPatternInput=document.getElementById("consumeManualPattern");
     const consumeManualRows=document.getElementById("consumeManualRows");
+    const consumeManualImageInput=document.getElementById("consumeManualImage");
+    const consumeManualImageName=document.getElementById("consumeManualImageName");
     const consumeFileInput=document.getElementById("consumeFile");
     const consumeFileName=document.getElementById("consumeFileName");
     const consumeBatchPatternInput=document.getElementById("consumeBatchPattern");
+    const consumeBatchImageInput=document.getElementById("consumeBatchImage");
+    const consumeBatchImageName=document.getElementById("consumeBatchImageName");
 
     // 图纸识别（AI）
     const consumeAiPatternInput=document.getElementById("consumeAiPattern");
@@ -4326,11 +4727,13 @@ function toast(message,type="success"){
     const consumeAiSummary=document.getElementById("consumeAiSummary");
     const consumeAiUnknown=document.getElementById("consumeAiUnknown");
     const consumeAiAddRowBtn=document.getElementById("consumeAiAddRow");
+    let consumeAiRecognizedFile = null;
 
     function aiClearResult(){
       consumeAiTbody.innerHTML="";
       consumeAiResultWrap.style.display="none";
       consumeAiEmpty.style.display="none";
+      consumeAiRecognizedFile = null;
       // AI 结果相关按钮：仅在有结果时展示
       consumeAiClearBtn.style.display="none";
       consumeAiAddRowBtn.style.display="none";
@@ -4433,6 +4836,11 @@ function toast(message,type="success"){
         toast("请先选择图纸图片","error");
         return;
       }
+      if(!isAllowedImageFile(file)){
+        toast("仅支持 JPG/PNG/WebP 图片","error");
+        return;
+      }
+      consumeAiRecognizedFile = null;
 
       consumeAiRecognizeBtn.disabled=true;
       const oldText=consumeAiRecognizeBtn.textContent;
@@ -4489,6 +4897,7 @@ function toast(message,type="success"){
 
         merged.forEach(it=>aiAddRow(it));
         aiRecalcSummary();
+        consumeAiRecognizedFile = file;
         toast("识别完成，请核对后点击「确认记录」","success");
       }catch(e){
         toast(e.message || "识别失败，请检查服务端接口","error");
@@ -4501,13 +4910,18 @@ function toast(message,type="success"){
 
     document.getElementById("btnConsume").addEventListener("click",()=>{
       consumeManualPatternInput.value="";
+      if(consumeManualImageInput) consumeManualImageInput.value="";
+      if(consumeManualImageName) consumeManualImageName.textContent="未选择图纸";
       if(consumeBatchPatternInput) consumeBatchPatternInput.value="";
+      if(consumeBatchImageInput) consumeBatchImageInput.value="";
+      if(consumeBatchImageName) consumeBatchImageName.textContent="未选择图纸";
       if(consumeFileInput) consumeFileInput.value="";
       if(consumeFileName) consumeFileName.textContent="未选择文件";
       // AI reset
       consumeAiPatternInput.value="";
       consumeAiImageInput.value="";
-      consumeAiImageName.textContent="未选择图片";
+      consumeAiImageName.textContent="未选择图纸";
+      consumeAiRecognizedFile = null;
       aiClearResult();
       consumeManualRows.innerHTML="";
       for(let i=0;i<3;i++) createManualRow(consumeManualRows,updateConsumeManualSummary);
@@ -4525,8 +4939,15 @@ function toast(message,type="success"){
       }
       createManualRow(consumeManualRows,updateConsumeManualSummary);
     });
+    consumeManualImageInput?.addEventListener("change",()=>{
+      updateImageInputLabel(consumeManualImageInput, consumeManualImageName);
+    });
+    consumeBatchImageInput?.addEventListener("change",()=>{
+      updateImageInputLabel(consumeBatchImageInput, consumeBatchImageName);
+    });
     consumeAiImageInput.addEventListener("change",()=>{
-      consumeAiImageName.textContent=consumeAiImageInput.files[0]?.name||"未选择图片";
+      updateImageInputLabel(consumeAiImageInput, consumeAiImageName);
+      consumeAiRecognizedFile = null;
     });
     consumeFileInput?.addEventListener("change",()=>{
       if(consumeFileName) consumeFileName.textContent=consumeFileInput.files[0]?.name||"未选择文件";
@@ -4575,7 +4996,13 @@ function toast(message,type="success"){
           }
           if(items.length===0){toast("请至少添加一条记录","error");return;}
 
-          await apiPost("/api/adjustBatch",{
+          let patternUpload = null;
+          const manualImageFile = consumeManualImageInput?.files?.[0];
+          if(manualImageFile){
+            patternUpload = await maybeUploadPatternImage(manualImageFile);
+          }
+
+          const payload = {
             items: items.map(item=>({
               code:item.code,
               type:"consume",
@@ -4583,7 +5010,11 @@ function toast(message,type="success"){
               pattern:pattern||null,
               source:"form"
             }))
-          },{headers:{"x-idempotency-key": reqId}});
+          };
+          if(patternUpload?.cdnUrl) payload.patternUrl = patternUpload.cdnUrl;
+          if(patternUpload?.objectKey) payload.patternKey = patternUpload.objectKey;
+
+          await apiPost("/api/adjustBatch", payload, {headers:{"x-idempotency-key": reqId}});
 
           await syncAll();
           showPage("records", {scrollTop:true, smooth:true});
@@ -4598,7 +5029,13 @@ function toast(message,type="success"){
           const rows=parseCsv(text);
           if(rows.length===0) throw new Error("empty");
 
-          await apiPost("/api/adjustBatch",{
+          let patternUpload = null;
+          const batchImageFile = consumeBatchImageInput?.files?.[0];
+          if(batchImageFile){
+            patternUpload = await maybeUploadPatternImage(batchImageFile);
+          }
+
+          const payload = {
             items: rows.map(r=>({
               code:r.code,
               type:"consume",
@@ -4606,7 +5043,11 @@ function toast(message,type="success"){
               pattern: pattern || null,
               source:"csv"
             }))
-          },{headers:{"x-idempotency-key": reqId}});
+          };
+          if(patternUpload?.cdnUrl) payload.patternUrl = patternUpload.cdnUrl;
+          if(patternUpload?.objectKey) payload.patternKey = patternUpload.objectKey;
+
+          await apiPost("/api/adjustBatch", payload, {headers:{"x-idempotency-key": reqId}});
 
           await syncAll();
           showPage("records", {scrollTop:true, smooth:true});
@@ -4626,7 +5067,13 @@ function toast(message,type="success"){
             items.push({code,qty});
           }
 
-          await apiPost("/api/adjustBatch",{
+          let patternUpload = null;
+          const aiImageFile = consumeAiRecognizedFile || consumeAiImageInput?.files?.[0];
+          if(aiImageFile){
+            patternUpload = await maybeUploadPatternImage(aiImageFile);
+          }
+
+          const payload = {
             items: items.map(item=>({
               code:item.code,
               type:"consume",
@@ -4634,7 +5081,11 @@ function toast(message,type="success"){
               pattern:pattern||null,
               source:"image"
             }))
-          },{headers:{"x-idempotency-key": reqId}});
+          };
+          if(patternUpload?.cdnUrl) payload.patternUrl = patternUpload.cdnUrl;
+          if(patternUpload?.objectKey) payload.patternKey = patternUpload.objectKey;
+
+          await apiPost("/api/adjustBatch", payload, {headers:{"x-idempotency-key": reqId}});
 
           await syncAll();
           showPage("records", {scrollTop:true, smooth:true});
@@ -4642,8 +5093,14 @@ function toast(message,type="success"){
 
         }
       }catch(e){
-        if(e && e.httpStatus===400 && e.message) toast(e.message,"error");
-        else toast("文件内容格式错误或记录失败","error");
+        const msg = e?.message ? String(e.message) : "";
+        if(e && e.httpStatus===400 && msg){
+          toast(msg,"error");
+        }else if(msg && msg !== "empty"){
+          toast(msg,"error");
+        }else{
+          toast("文件内容格式错误或记录失败","error");
+        }
       } finally {
         consumeConfirmBtn.disabled = false;
       }
@@ -5255,6 +5712,12 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
     const recordEditTitle = document.getElementById("recordEditTitle");
     const recordEditPatternField = document.getElementById("recordEditPatternField");
     const recordEditPatternInput = document.getElementById("recordEditPattern");
+    const recordEditImageField = document.getElementById("recordEditImageField");
+    const recordEditImageInput = document.getElementById("recordEditImage");
+    const recordEditImageName = document.getElementById("recordEditImageName");
+    const recordEditImagePreview = document.getElementById("recordEditImagePreview");
+    const recordEditImagePreviewImg = document.getElementById("recordEditImagePreviewImg");
+    const recordEditImageClear = document.getElementById("recordEditImageClear");
     const recordEditRows = document.getElementById("recordEditRows");
     const recordEditAddRow = document.getElementById("recordEditAddRow");
     const recordEditCancel = document.getElementById("recordEditCancel");
@@ -5282,6 +5745,12 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
     };
 
     function _recKey(type,gid){ return `${type}|${gid}`; }
+    function setRecordToggleButton(btn, expanded){
+      const label = expanded ? "收起" : "展开";
+      const icon = iosIcon(expanded ? "chevronUp" : "chevronDown");
+      btn.innerHTML = `<span class="toggle-text">${label}</span><span class="toggle-icon">${icon}</span>`;
+      btn.setAttribute("aria-label", label);
+    }
 
     function setRecordsTab(type){
       type = (type==="restock" || type==="stats") ? type : "consume";
@@ -5413,32 +5882,14 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
         const gid = String(g.gid ?? g.id ?? "");
         const ts = g.ts ?? g.created_at ?? g.createdAt ?? g.time ?? "";
         const pattern = String(g.pattern ?? "");
+        const patternUrlRaw = g.patternUrl ?? g.pattern_url;
+        const patternUrl = (patternUrlRaw === null || patternUrlRaw === undefined) ? "" : String(patternUrlRaw).trim();
+        const patternClean = (pattern==="手动调整") ? "" : pattern;
         const total = Number(g.total ?? g.sum ?? g.totalQty ?? 0) || 0;
 
-        const row = document.createElement("div");
-        row.className = "records-row";
-        row.dataset.gid = gid;
-
-        const cTime = document.createElement("div");
-        cTime.className = "time";
         const tp = formatTimeSecondParts(ts);
-        cTime.innerHTML = timePartsHtml(tp);
-        row.appendChild(cTime);
-
-        if(type==="consume"){
-          const cPattern = document.createElement("div");
-          const patternClean = (pattern==="手动调整") ? "" : pattern;
-          cPattern.textContent = patternClean || "";
-          row.appendChild(cPattern);
-        }
-
-        const cTotal = document.createElement("div");
-        cTotal.className = "num";
-        cTotal.textContent = String(total);
-        row.appendChild(cTotal);
-
-        const cOp = document.createElement("div");
-        cOp.className="op";
+        const k = _recKey(type, gid);
+        const expanded = RECORDS_STATE.expanded.has(k);
 
         const btnDel = document.createElement("button");
         btnDel.type="button";
@@ -5450,15 +5901,12 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
         btnEdit.type="button";
         btnEdit.className="link-action";
         btnEdit.textContent="编辑";
-        btnEdit.addEventListener("click", ()=>openRecordEdit(type, gid, pattern));
+        btnEdit.addEventListener("click", ()=>openRecordEdit(type, gid, pattern, patternUrl));
 
         const btnToggle = document.createElement("button");
         btnToggle.type="button";
-        btnToggle.className="link-action";
-
-        const k = _recKey(type, gid);
-        const expanded = RECORDS_STATE.expanded.has(k);
-        btnToggle.textContent = expanded ? "收起" : "展开";
+        btnToggle.className="link-action record-toggle-btn";
+        setRecordToggleButton(btnToggle, expanded);
 
         const detail = document.createElement("div");
         detail.className="record-detail";
@@ -5468,23 +5916,98 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
           const nowExp = RECORDS_STATE.expanded.has(k);
           if(nowExp){
             RECORDS_STATE.expanded.delete(k);
-            btnToggle.textContent="展开";
+            setRecordToggleButton(btnToggle, false);
             detail.style.display="none";
           }else{
             RECORDS_STATE.expanded.add(k);
-            btnToggle.textContent="收起";
+            setRecordToggleButton(btnToggle, true);
             detail.style.display="";
             await ensureRecordDetail(type, gid, detail);
           }
         });
 
-        cOp.appendChild(btnDel);
-        cOp.appendChild(btnEdit);
-        cOp.appendChild(btnToggle);
-        row.appendChild(cOp);
+        if(type==="consume"){
+          const card = document.createElement("div");
+          card.className = "record-card";
+          card.dataset.gid = gid;
 
-        listEl.appendChild(row);
-        listEl.appendChild(detail);
+          const thumb = document.createElement("div");
+          thumb.className = "record-thumb";
+          thumb.setAttribute("aria-hidden","true");
+          if(patternUrl){
+            const img = document.createElement("img");
+            img.src = patternUrl;
+            img.alt = patternClean ? patternClean : "图纸";
+            img.loading = "lazy";
+            img.addEventListener("error", ()=>{
+              img.remove();
+              thumb.classList.remove("has-image");
+            });
+            thumb.classList.add("has-image");
+            thumb.appendChild(img);
+          }
+
+          const main = document.createElement("div");
+          main.className = "record-main";
+
+          const title = document.createElement("div");
+          title.className = "record-title";
+          title.textContent = patternClean || "未命名图纸";
+          if(!patternClean) title.classList.add("is-empty");
+
+          const metaLine = document.createElement("div");
+          metaLine.className = "record-meta-line";
+
+          const cTime = document.createElement("div");
+          cTime.className = "record-time";
+          cTime.innerHTML = timePartsHtml(tp);
+
+          const totalText = document.createElement("div");
+          totalText.className = "record-total";
+          totalText.textContent = `总消耗：${total}`;
+
+          metaLine.appendChild(cTime);
+          metaLine.appendChild(totalText);
+
+          const actions = document.createElement("div");
+          actions.className="record-actions";
+          actions.appendChild(btnDel);
+          actions.appendChild(btnEdit);
+          actions.appendChild(btnToggle);
+
+          main.appendChild(title);
+          main.appendChild(metaLine);
+          main.appendChild(actions);
+
+          card.appendChild(thumb);
+          card.appendChild(main);
+          card.appendChild(detail);
+          listEl.appendChild(card);
+        }else{
+          const row = document.createElement("div");
+          row.className = "records-row";
+          row.dataset.gid = gid;
+
+          const cTime = document.createElement("div");
+          cTime.className = "time";
+          cTime.innerHTML = timePartsHtml(tp);
+          row.appendChild(cTime);
+
+          const cTotal = document.createElement("div");
+          cTotal.className = "num";
+          cTotal.textContent = String(total);
+          row.appendChild(cTotal);
+
+          const cOp = document.createElement("div");
+          cOp.className="op";
+          cOp.appendChild(btnDel);
+          cOp.appendChild(btnEdit);
+          cOp.appendChild(btnToggle);
+          row.appendChild(cOp);
+
+          listEl.appendChild(row);
+          listEl.appendChild(detail);
+        }
 
         if(expanded){
           ensureRecordDetail(type, gid, detail);
@@ -5566,15 +6089,66 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       });
     }
 
-    async function openRecordEdit(type, gid, pattern){
+    const RECORD_EDIT_IMAGE = {
+      originalUrl: "",
+      file: null,
+      previewUrl: "",
+      removed: false,
+      changed: false
+    };
+    function clearRecordEditPreviewUrl(){
+      if(RECORD_EDIT_IMAGE.previewUrl){
+        URL.revokeObjectURL(RECORD_EDIT_IMAGE.previewUrl);
+        RECORD_EDIT_IMAGE.previewUrl = "";
+      }
+    }
+    function updateRecordEditImageUI(){
+      if(!recordEditImageName || !recordEditImagePreview || !recordEditImagePreviewImg) return;
+      const hasFile = !!RECORD_EDIT_IMAGE.file;
+      const showUrl = hasFile
+        ? RECORD_EDIT_IMAGE.previewUrl
+        : (RECORD_EDIT_IMAGE.removed ? "" : RECORD_EDIT_IMAGE.originalUrl);
+      if(showUrl){
+        recordEditImagePreview.style.display = "flex";
+        recordEditImagePreviewImg.src = showUrl;
+      }else{
+        recordEditImagePreview.style.display = "none";
+        recordEditImagePreviewImg.removeAttribute("src");
+      }
+      if(hasFile){
+        recordEditImageName.textContent = RECORD_EDIT_IMAGE.file.name || "已选择图纸";
+      }else if(RECORD_EDIT_IMAGE.originalUrl && !RECORD_EDIT_IMAGE.removed){
+        recordEditImageName.textContent = "已上传图纸";
+      }else{
+        recordEditImageName.textContent = "未选择图纸";
+      }
+      if(recordEditImageClear){
+        const canClear = hasFile || (!!RECORD_EDIT_IMAGE.originalUrl && !RECORD_EDIT_IMAGE.removed);
+        recordEditImageClear.disabled = !canClear;
+      }
+    }
+    function resetRecordEditImage(url){
+      if(recordEditImageInput) recordEditImageInput.value = "";
+      clearRecordEditPreviewUrl();
+      RECORD_EDIT_IMAGE.originalUrl = String(url || "");
+      RECORD_EDIT_IMAGE.file = null;
+      RECORD_EDIT_IMAGE.removed = false;
+      RECORD_EDIT_IMAGE.changed = false;
+      updateRecordEditImageUI();
+    }
+
+    async function openRecordEdit(type, gid, pattern, patternUrl){
       if(!recordEditDialog) return;
       RECORDS_STATE.pendingEdit = {type, gid};
       if(recordEditTitle) recordEditTitle.textContent = type==="consume" ? "编辑消耗记录" : "编辑补充记录";
       if(recordEditPatternField) recordEditPatternField.style.display = type==="consume" ? "" : "none";
+      if(recordEditImageField) recordEditImageField.style.display = type==="consume" ? "" : "none";
       if(recordEditPatternInput){
         const p = (pattern==="手动调整") ? "" : String(pattern||"");
         recordEditPatternInput.value = p;
       }
+      if(type==="consume") resetRecordEditImage(patternUrl || "");
+      else resetRecordEditImage("");
       if(recordEditRows) recordEditRows.innerHTML = "<div class='help'>加载中...</div>";
       openDialog(recordEditDialog);
 
@@ -5596,6 +6170,7 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
     function closeRecordEditDialog(){
       closeDialog(recordEditDialog);
       RECORDS_STATE.pendingEdit = null;
+      resetRecordEditImage("");
     }
 
     async function doRecordEdit(){
@@ -5624,6 +6199,16 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
           const pattern = (recordEditPatternInput?.value || "").trim();
           if(pattern.length>20){ toast("图纸名称不超过 20 字","error"); return; }
           payload.pattern = pattern || null;
+          if(RECORD_EDIT_IMAGE.changed){
+            if(RECORD_EDIT_IMAGE.removed){
+              payload.patternUrl = null;
+              payload.patternKey = null;
+            }else if(RECORD_EDIT_IMAGE.file){
+              const uploaded = await uploadPatternImage(RECORD_EDIT_IMAGE.file);
+              payload.patternUrl = uploaded?.cdnUrl || null;
+              payload.patternKey = uploaded?.objectKey || null;
+            }
+          }
         }
 
         await apiPost("/api/recordGroupUpdate", payload);
@@ -5682,13 +6267,47 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
     if(recordEditClose) recordEditClose.addEventListener("click", closeRecordEditDialog);
     if(recordEditCancel) recordEditCancel.addEventListener("click", closeRecordEditDialog);
     if(recordEditConfirm) recordEditConfirm.addEventListener("click", doRecordEdit);
+    if(recordEditImageInput){
+      recordEditImageInput.addEventListener("change", ()=>{
+        const file = recordEditImageInput.files?.[0];
+        if(!file){
+          updateRecordEditImageUI();
+          return;
+        }
+        if(!isAllowedImageFile(file)){
+          toast("仅支持 JPG/PNG/WebP 图片","error");
+          recordEditImageInput.value = "";
+          updateRecordEditImageUI();
+          return;
+        }
+        clearRecordEditPreviewUrl();
+        RECORD_EDIT_IMAGE.file = file;
+        RECORD_EDIT_IMAGE.removed = false;
+        RECORD_EDIT_IMAGE.changed = true;
+        RECORD_EDIT_IMAGE.previewUrl = URL.createObjectURL(file);
+        updateRecordEditImageUI();
+      });
+    }
+    if(recordEditImageClear){
+      recordEditImageClear.addEventListener("click", ()=>{
+        if(recordEditImageInput) recordEditImageInput.value = "";
+        clearRecordEditPreviewUrl();
+        RECORD_EDIT_IMAGE.file = null;
+        RECORD_EDIT_IMAGE.removed = true;
+        RECORD_EDIT_IMAGE.changed = true;
+        updateRecordEditImageUI();
+      });
+    }
     if(recordEditAddRow) recordEditAddRow.addEventListener("click", ()=>{
       const rows = recordEditRows?.querySelectorAll(".record-row") || [];
       if(rows.length>=100){ toast("一次最多添加 100 条记录","error"); return; }
       createManualRow(recordEditRows);
     });
     if(recordEditDialog && !recordEditDialog.__hooked){
-      recordEditDialog.addEventListener("close", ()=>{ RECORDS_STATE.pendingEdit = null; });
+      recordEditDialog.addEventListener("close", ()=>{
+        RECORDS_STATE.pendingEdit = null;
+        resetRecordEditImage("");
+      });
       recordEditDialog.__hooked = true;
     }
 

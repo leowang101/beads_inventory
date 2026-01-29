@@ -37,6 +37,16 @@ const DASHSCOPE_API_KEY = process.env.DASHSCOPE_API_KEY || "";
 const DASHSCOPE_BASE_URL = process.env.DASHSCOPE_BASE_URL || "https://dashscope.aliyuncs.com/api/v1";
 const QWEN_VL_MODEL = process.env.QWEN_VL_MODEL || "qwen-vl-plus";
 
+// ====== OSS (STS via ECS RAM Role) ======
+const OSS_REGION = process.env.OSS_REGION || "oss-cn-beijing";
+const OSS_BUCKET = process.env.OSS_BUCKET || "beads-patterns";
+const OSS_UPLOAD_ENDPOINT = process.env.OSS_UPLOAD_ENDPOINT || process.env.OSS_UPLOAD_DOMAIN || "https://upload.leobeads.xyz";
+const OSS_UPLOAD_CNAME = String(process.env.OSS_UPLOAD_CNAME || "true").toLowerCase() !== "false";
+const OSS_CDN_BASE_URL = process.env.OSS_CDN_BASE_URL || process.env.OSS_CDN_DOMAIN || "https://img.leobeads.xyz";
+const ECS_RAM_ROLE_NAME = process.env.ECS_RAM_ROLE_NAME || process.env.OSS_ROLE_NAME || "EcsOssRole";
+const ECS_METADATA_BASE_URL = process.env.ECS_METADATA_BASE_URL || "http://100.100.100.200/latest/meta-data/ram/security-credentials";
+const OSS_UPLOAD_PREFIX = process.env.OSS_UPLOAD_PREFIX || "patterns";
+
 // ====== 色号列表（来自 系列_色号_色值对应.csv）======
 const PALETTE_ALL = [
   { code: "A1", hex: "#FAF5CD", series: "A系列", isDefault: true },
@@ -346,6 +356,17 @@ function normUsername(v) {
   return String(v ?? "").trim();
 }
 
+function normPatternUrl(v) {
+  const s = String(v ?? "").trim();
+  if (!s) return null;
+  return s.slice(0, 512);
+}
+function normPatternKey(v) {
+  const s = String(v ?? "").trim();
+  if (!s) return null;
+  return s.slice(0, 512);
+}
+
 function isValidUsername(username) {
   return /^[A-Za-z0-9_\-\u4e00-\u9fa5]{3,32}$/.test(String(username || ""));
 }
@@ -501,6 +522,8 @@ async function ensureSchema() {
       htype VARCHAR(16) NOT NULL,
       qty INT NOT NULL,
       pattern VARCHAR(64) NULL,
+      pattern_url VARCHAR(512) NULL,
+      pattern_key VARCHAR(512) NULL,
       source VARCHAR(32) NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_user_code_time(user_id, code, created_at),
@@ -512,6 +535,8 @@ async function ensureSchema() {
   // best-effort: 兼容旧库，为“拼豆记录”增加 batch_id（把一次操作的多条明细归并）
   try { await pool.query("ALTER TABLE user_history ADD COLUMN batch_id VARCHAR(64) NULL"); } catch (e) {}
   try { await pool.query("CREATE INDEX idx_user_history_user_batch ON user_history(user_id, batch_id)"); } catch (e) {}
+  try { await pool.query("ALTER TABLE user_history ADD COLUMN pattern_url VARCHAR(512) NULL"); } catch (e) {}
+  try { await pool.query("ALTER TABLE user_history ADD COLUMN pattern_key VARCHAR(512) NULL"); } catch (e) {}
 
   // seed global palette (all codes) - ignore duplicates
   if (PALETTE_ALL.length > 0) {
@@ -623,6 +648,51 @@ const upload = multer({
   limits: { fileSize: 8 * 1024 * 1024 },
 });
 
+// ---- OSS STS (via ECS RAM Role) ----
+let _ossStsCache = null; // {data:{...}, expireAt:number}
+
+async function fetchEcsSts() {
+  const base = String(ECS_METADATA_BASE_URL || "").replace(/\/+$/, "");
+  const role = String(ECS_RAM_ROLE_NAME || "").trim();
+  if (!base || !role) throw new Error("OSS STS 配置缺失");
+  const url = `${base}/${encodeURIComponent(role)}`;
+  const resp = await fetch(url, { method: "GET" });
+  const raw = await resp.text();
+  if (!resp.ok) {
+    throw new Error(`ECS 元数据请求失败（${resp.status}）`);
+  }
+  let data = null;
+  try { data = JSON.parse(raw); } catch {}
+  if (!data || (data.Code && data.Code !== "Success")) {
+    throw new Error("ECS 元数据返回异常");
+  }
+  const accessKeyId = data.AccessKeyId;
+  const accessKeySecret = data.AccessKeySecret;
+  const securityToken = data.SecurityToken;
+  const expiration = data.Expiration;
+  if (!accessKeyId || !accessKeySecret || !securityToken || !expiration) {
+    throw new Error("ECS 元数据缺少凭证字段");
+  }
+  return { accessKeyId, accessKeySecret, securityToken, expiration };
+}
+
+async function getOssSts() {
+  const now = Date.now();
+  if (_ossStsCache && _ossStsCache.expireAt && _ossStsCache.expireAt - now > 60 * 1000) {
+    return _ossStsCache.data;
+  }
+  const data = await fetchEcsSts();
+  const expireAt = Date.parse(data.expiration) || 0;
+  _ossStsCache = { data, expireAt };
+  return data;
+}
+
+function buildUploadPrefix(userId) {
+  const base = String(OSS_UPLOAD_PREFIX || "patterns").replace(/^\/+|\/+$/g, "");
+  const uid = String(userId || "").trim();
+  return uid ? `${base}/${uid}/` : `${base}/`;
+}
+
 // ====== public ======
 app.get("/api/health", (req, res) => {
   sendJson(res, 200, { ok: true, buildTag: BUILD_TAG, ts: new Date().toISOString() });
@@ -639,6 +709,32 @@ app.get("/api/public/palette", async (req, res) => {
   } catch (e) {
     const data = PALETTE_ALL.map(x => ({ code: x.code, hex: x.hex, series: x.series, isDefault: x.isDefault ? 1 : 0 }));
     sendJson(res, 200, { ok: true, data, buildTag: BUILD_TAG, fallback: true, warn: e.message });
+  }
+});
+
+// ====== oss sts ======
+app.get("/api/oss/sts", requireAuth, async (req, res) => {
+  try {
+    const sts = await getOssSts();
+    const uploadPrefix = buildUploadPrefix(req.user?.id);
+    sendJson(res, 200, {
+      ok: true,
+      data: {
+        region: OSS_REGION,
+        bucket: OSS_BUCKET,
+        endpoint: OSS_UPLOAD_ENDPOINT,
+        cname: OSS_UPLOAD_CNAME,
+        secure: true,
+        accessKeyId: sts.accessKeyId,
+        accessKeySecret: sts.accessKeySecret,
+        securityToken: sts.securityToken,
+        expiration: sts.expiration,
+        uploadPrefix,
+        cdnBaseUrl: OSS_CDN_BASE_URL,
+      },
+    });
+  } catch (e) {
+    sendJson(res, 502, { ok: false, message: e.message });
   }
 });
 
@@ -811,6 +907,14 @@ app.post("/api/adjust", requireAuth, async (req, res) => {
     const type = String(req.body?.type || "");
     const qty = Number(req.body?.qty);
     const pattern = req.body?.pattern ? String(req.body.pattern).slice(0, 64) : null;
+    const patternUrlRaw = Object.prototype.hasOwnProperty.call(req.body || {}, "patternUrl")
+      ? req.body?.patternUrl
+      : null;
+    const patternUrl = normPatternUrl(patternUrlRaw);
+    const patternKeyRaw = Object.prototype.hasOwnProperty.call(req.body || {}, "patternKey")
+      ? req.body?.patternKey
+      : null;
+    const patternKey = normPatternKey(patternKeyRaw);
     const source = req.body?.source ? String(req.body.source).slice(0, 32) : null;
 
     if (!code) return sendJson(res, 400, { ok: false, message: "missing code" });
@@ -856,9 +960,11 @@ app.post("/api/adjust", requireAuth, async (req, res) => {
       [delta, req.user.id, code]
     );
     const batchId = newBatchId();
+    const finalPatternUrl = type === "consume" ? patternUrl : null;
+    const finalPatternKey = type === "consume" ? patternKey : null;
     await safeQuery(
-      "INSERT INTO user_history(user_id, code, htype, qty, pattern, source, batch_id) VALUES(?,?,?,?,?,?,?)",
-      [req.user.id, code, type, Math.abs(Math.floor(qty)), pattern, source, batchId]
+      "INSERT INTO user_history(user_id, code, htype, qty, pattern, pattern_url, pattern_key, source, batch_id) VALUES(?,?,?,?,?,?,?,?,?)",
+      [req.user.id, code, type, Math.abs(Math.floor(qty)), pattern, finalPatternUrl, finalPatternKey, source, batchId]
     );
     sendJson(res, 200, { ok: true });
   } catch (e) {
@@ -912,6 +1018,12 @@ app.post("/api/adjustBatch", requireAuth, async (req, res) => {
 
     const typeDefault = String(req.body?.type || "");
     const patternDefault = req.body?.pattern ? String(req.body.pattern).slice(0, 64) : null;
+    const patternUrlDefault = Object.prototype.hasOwnProperty.call(req.body || {}, "patternUrl")
+      ? req.body?.patternUrl
+      : null;
+    const patternKeyDefault = Object.prototype.hasOwnProperty.call(req.body || {}, "patternKey")
+      ? req.body?.patternKey
+      : null;
     const sourceDefault = req.body?.source ? String(req.body.source).slice(0, 32) : null;
     const items = Array.isArray(req.body?.items) ? req.body.items : [];
 
@@ -925,6 +1037,14 @@ app.post("/api/adjustBatch", requireAuth, async (req, res) => {
       const qty = Number(it?.qty);
       const type = String(it?.type || typeDefault || "");
       const pattern = it?.pattern ? String(it.pattern).slice(0, 64) : patternDefault;
+      const patternUrlRaw = Object.prototype.hasOwnProperty.call(it || {}, "patternUrl")
+        ? it?.patternUrl
+        : patternUrlDefault;
+      const patternUrl = normPatternUrl(patternUrlRaw);
+      const patternKeyRaw = Object.prototype.hasOwnProperty.call(it || {}, "patternKey")
+        ? it?.patternKey
+        : patternKeyDefault;
+      const patternKey = normPatternKey(patternKeyRaw);
       const source = it?.source ? String(it.source).slice(0, 32) : sourceDefault;
 
       if (!code) return sendJson(res, 400, { ok: false, message: "missing code" });
@@ -936,6 +1056,8 @@ app.post("/api/adjustBatch", requireAuth, async (req, res) => {
         qty: Math.abs(Math.floor(qty)),
         type,
         pattern,
+        patternUrl: type === "consume" ? patternUrl : null,
+        patternKey: type === "consume" ? patternKey : null,
         source,
       });
     }
@@ -1030,10 +1152,10 @@ app.post("/api/adjustBatch", requireAuth, async (req, res) => {
         const vals = [];
         const params = [];
         for (const it of normalized) {
-          vals.push("(?,?,?,?,?,?,?)");
-          params.push(req.user.id, it.code, it.type, it.qty, it.pattern, it.source, batchId);
+          vals.push("(?,?,?,?,?,?,?,?,?)");
+          params.push(req.user.id, it.code, it.type, it.qty, it.pattern, it.patternUrl, it.patternKey, it.source, batchId);
         }
-        await q(conn, `INSERT INTO user_history(user_id, code, htype, qty, pattern, source, batch_id) VALUES ${vals.join(",")}`, params);
+        await q(conn, `INSERT INTO user_history(user_id, code, htype, qty, pattern, pattern_url, pattern_key, source, batch_id) VALUES ${vals.join(",")}`, params);
       }
     });
 
@@ -1064,7 +1186,7 @@ app.get("/api/history", requireAuth, async (req, res) => {
 
     // 明细：统一字段名，保持与访客模式一致：ts/type/qty/pattern/source
     const [rows] = await safeQuery(
-      `SELECT UNIX_TIMESTAMP(created_at)*1000 AS ts, htype AS type, qty, pattern, source
+      `SELECT UNIX_TIMESTAMP(created_at)*1000 AS ts, htype AS type, qty, pattern, pattern_url AS patternUrl, pattern_key AS patternKey, source
        FROM user_history
        WHERE user_id=? AND code=?
        ORDER BY created_at DESC, id DESC
@@ -1129,11 +1251,13 @@ app.get("/api/recordGroups", requireAuth, async (req, res) => {
 
     const [rows] = await safeQuery(
       `
-      SELECT gid, ts, pattern, total FROM (
+      SELECT gid, ts, pattern, patternUrl, patternKey, total FROM (
         SELECT
           CONCAT('b:', batch_id) AS gid,
           UNIX_TIMESTAMP(MAX(created_at))*1000 AS ts,
           MAX(pattern) AS pattern,
+          MAX(pattern_url) AS patternUrl,
+          MAX(pattern_key) AS patternKey,
           SUM(qty) AS total,
           MAX(id) AS maxId
         FROM user_history
@@ -1147,6 +1271,8 @@ app.get("/api/recordGroups", requireAuth, async (req, res) => {
           CONCAT('i:', MIN(id)) AS gid,
           UNIX_TIMESTAMP(MAX(created_at))*1000 AS ts,
           MAX(pattern) AS pattern,
+          MAX(pattern_url) AS patternUrl,
+          MAX(pattern_key) AS patternKey,
           SUM(qty) AS total,
           MAX(id) AS maxId
         FROM user_history
@@ -1226,6 +1352,10 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
     const items = Array.isArray(req.body?.items) ? req.body.items : [];
     const hasPattern = Object.prototype.hasOwnProperty.call(req.body || {}, "pattern");
     const patternRaw = hasPattern ? String(req.body?.pattern || "") : "";
+    const hasPatternUrl = Object.prototype.hasOwnProperty.call(req.body || {}, "patternUrl");
+    const patternUrlRaw = hasPatternUrl ? req.body?.patternUrl : null;
+    const hasPatternKey = Object.prototype.hasOwnProperty.call(req.body || {}, "patternKey");
+    const patternKeyRaw = hasPatternKey ? req.body?.patternKey : null;
 
     if(!gid) return sendJson(res, 400, { ok:false, message:"missing gid" });
     if(!["consume","restock"].includes(type)) return sendJson(res, 400, { ok:false, message:"invalid type" });
@@ -1238,6 +1368,8 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
       return t ? t.slice(0, 64) : null;
     };
     const pattern = hasPattern ? normPattern(patternRaw) : null;
+    const patternUrl = hasPatternUrl ? normPatternUrl(patternUrlRaw) : null;
+    const patternKey = hasPatternKey ? normPatternKey(patternKeyRaw) : null;
 
     // Normalize items (merge same code)
     const newMap = new Map();
@@ -1257,13 +1389,15 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
     let batchId = null;
     let baseCreatedAt = null;
     let basePattern = null;
+    let basePatternUrl = null;
     let baseSource = null;
+    let basePatternKey = null;
 
     if(gid.startsWith("b:")){
       batchId = gid.slice(2);
       if(!batchId) return sendJson(res, 400, { ok:false, message:"invalid gid" });
       const [[base]] = await safeQuery(
-        `SELECT MAX(created_at) AS created_at, MAX(pattern) AS pattern, MAX(source) AS source
+        `SELECT MAX(created_at) AS created_at, MAX(pattern) AS pattern, MAX(pattern_url) AS pattern_url, MAX(pattern_key) AS pattern_key, MAX(source) AS source
          FROM user_history
          WHERE user_id=? AND htype=? AND batch_id=?`,
         [req.user.id, type, batchId]
@@ -1273,7 +1407,9 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
       }
       baseCreatedAt = base.created_at;
       basePattern = base.pattern;
+      basePatternUrl = base.pattern_url;
       baseSource = base.source;
+      basePatternKey = base.pattern_key;
       whereSql = " AND batch_id=? ";
       whereParams = [batchId];
     }else if(gid.startsWith("i:")){
@@ -1282,15 +1418,17 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
         return sendJson(res, 400, { ok:false, message:"invalid gid" });
       }
       const [[base]] = await safeQuery(
-        `SELECT created_at, IFNULL(pattern,'') AS patternKey, IFNULL(source,'') AS sourceKey
+        `SELECT created_at, IFNULL(pattern,'') AS patternNameKey, IFNULL(pattern_url,'') AS patternUrlKey, IFNULL(pattern_key,'') AS patternObjKey, IFNULL(source,'') AS sourceKey
          FROM user_history
          WHERE user_id=? AND id=? AND htype=? LIMIT 1`,
         [req.user.id, anchorId, type]
       );
       if(!base) return sendJson(res, 404, { ok:false, message:"group not found" });
       baseCreatedAt = base.created_at;
-      basePattern = base.patternKey;
+      basePattern = base.patternNameKey;
+      basePatternUrl = base.patternUrlKey;
       baseSource = base.sourceKey;
+      basePatternKey = base.patternObjKey;
       whereSql = " AND batch_id IS NULL AND created_at=? AND IFNULL(pattern,'')=? AND IFNULL(source,'')=? ";
       whereParams = [baseCreatedAt, basePattern, baseSource];
     }else{
@@ -1367,6 +1505,18 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
       if(hasPattern) return pattern;
       return base;
     })();
+    const finalPatternUrl = (() => {
+      const base = normPatternUrl(basePatternUrl);
+      if(type !== "consume") return base;
+      if(hasPatternUrl) return patternUrl;
+      return base;
+    })();
+    const finalPatternKey = (() => {
+      const base = normPatternKey(basePatternKey);
+      if(type !== "consume") return base;
+      if(hasPatternKey) return patternKey;
+      return base;
+    })();
     const finalSource = (() => {
       const s = (baseSource === null || baseSource === undefined) ? "" : String(baseSource);
       const t = s.trim();
@@ -1415,12 +1565,12 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
       const vals = [];
       const params = [];
       for(const it of normalized){
-        vals.push("(?,?,?,?,?,?,?,?)");
-        params.push(req.user.id, it.code, type, it.qty, finalPattern, finalSource, batchId, createdAt);
+        vals.push("(?,?,?,?,?,?,?,?,?,?)");
+        params.push(req.user.id, it.code, type, it.qty, finalPattern, finalPatternUrl, finalPatternKey, finalSource, batchId, createdAt);
       }
       await q(
         conn,
-        `INSERT INTO user_history(user_id, code, htype, qty, pattern, source, batch_id, created_at)
+        `INSERT INTO user_history(user_id, code, htype, qty, pattern, pattern_url, pattern_key, source, batch_id, created_at)
          VALUES ${vals.join(",")}`,
         params
       );
