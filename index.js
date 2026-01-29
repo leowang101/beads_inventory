@@ -23,6 +23,7 @@ const mysql = require("mysql2/promise");
 const path = require("path");
 
 const BUILD_TAG = "beads-multi-2025-12-15";
+const MAX_PATTERN_CATEGORIES = 10;
 
 const PORT = Number(process.env.PORT || 3000);
 const SERVE_FRONTEND = String(process.env.SERVE_FRONTEND || "true").toLowerCase() !== "false";
@@ -367,6 +368,26 @@ function normPatternKey(v) {
   return s.slice(0, 512);
 }
 
+function categoryDisplayLength(v){
+  let len = 0;
+  const s = String(v ?? "");
+  for(const ch of s){
+    len += /[^\x00-\xff]/.test(ch) ? 2 : 1;
+  }
+  return len;
+}
+
+function normCategoryName(v){
+  return String(v ?? "").trim();
+}
+
+function parseCategoryId(v){
+  if(v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  if(!Number.isInteger(n) || n <= 0) return null;
+  return n;
+}
+
 function isValidUsername(username) {
   return /^[A-Za-z0-9_\-\u4e00-\u9fa5]{3,32}$/.test(String(username || ""));
 }
@@ -505,6 +526,18 @@ async function ensureSchema() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_pattern_categories (
+      id BIGINT PRIMARY KEY AUTO_INCREMENT,
+      user_id BIGINT NOT NULL,
+      name VARCHAR(32) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_user_category(user_id, name),
+      INDEX idx_user_category_user(user_id),
+      CONSTRAINT fk_pattern_category_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS user_removed_codes (
       user_id BIGINT NOT NULL,
       code VARCHAR(16) NOT NULL,
@@ -524,6 +557,7 @@ async function ensureSchema() {
       pattern VARCHAR(64) NULL,
       pattern_url VARCHAR(512) NULL,
       pattern_key VARCHAR(512) NULL,
+      pattern_category_id BIGINT NULL,
       source VARCHAR(32) NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_user_code_time(user_id, code, created_at),
@@ -537,6 +571,9 @@ async function ensureSchema() {
   try { await pool.query("CREATE INDEX idx_user_history_user_batch ON user_history(user_id, batch_id)"); } catch (e) {}
   try { await pool.query("ALTER TABLE user_history ADD COLUMN pattern_url VARCHAR(512) NULL"); } catch (e) {}
   try { await pool.query("ALTER TABLE user_history ADD COLUMN pattern_key VARCHAR(512) NULL"); } catch (e) {}
+  try { await pool.query("ALTER TABLE user_history ADD COLUMN pattern_category_id BIGINT NULL"); } catch (e) {}
+  try { await pool.query("CREATE INDEX idx_history_user_category ON user_history(user_id, pattern_category_id)"); } catch (e) {}
+  try { await pool.query("ALTER TABLE user_history ADD CONSTRAINT fk_history_pattern_category FOREIGN KEY(pattern_category_id) REFERENCES user_pattern_categories(id) ON DELETE SET NULL"); } catch (e) {}
 
   // seed global palette (all codes) - ignore duplicates
   if (PALETTE_ALL.length > 0) {
@@ -901,6 +938,79 @@ app.post("/api/settings", requireAuth, async (req, res) => {
   }
 });
 
+// ====== Pattern Categories ======
+app.get("/api/patternCategories", requireAuth, async (req, res) => {
+  try{
+    const [rows] = await safeQuery(
+      `SELECT id, name, created_at AS createdAt
+       FROM user_pattern_categories
+       WHERE user_id=?
+       ORDER BY created_at ASC, id ASC`,
+      [req.user.id]
+    );
+    sendJson(res, 200, { ok:true, data: rows });
+  }catch(e){
+    sendJson(res, 500, { ok:false, message: e.message });
+  }
+});
+
+app.post("/api/patternCategories", requireAuth, async (req, res) => {
+  try{
+    const name = normCategoryName(req.body?.name);
+    if(!name) return sendJson(res, 400, { ok:false, message:"请输入分类名称" });
+    if(categoryDisplayLength(name) > 12){
+      return sendJson(res, 400, { ok:false, message:"分类名称最多6个中文或12个英文" });
+    }
+
+    const [[countRow]] = await safeQuery(
+      "SELECT COUNT(1) AS cnt FROM user_pattern_categories WHERE user_id=?",
+      [req.user.id]
+    );
+    const cnt = Number(countRow?.cnt || 0);
+    if(cnt >= MAX_PATTERN_CATEGORIES){
+      return sendJson(res, 400, { ok:false, message:`最多只能创建${MAX_PATTERN_CATEGORIES}个分类` });
+    }
+
+    const [exists] = await safeQuery(
+      "SELECT id FROM user_pattern_categories WHERE user_id=? AND name=? LIMIT 1",
+      [req.user.id, name]
+    );
+    if(exists && exists.length > 0){
+      return sendJson(res, 400, { ok:false, message:"分类已存在" });
+    }
+
+    const [result] = await safeQuery(
+      "INSERT INTO user_pattern_categories(user_id, name) VALUES(?, ?)",
+      [req.user.id, name]
+    );
+    sendJson(res, 200, { ok:true, id: result?.insertId, name });
+  }catch(e){
+    sendJson(res, 500, { ok:false, message: e.message });
+  }
+});
+
+app.post("/api/patternCategoryDelete", requireAuth, async (req, res) => {
+  try{
+    const id = parseCategoryId(req.body?.id);
+    if(!id) return sendJson(res, 400, { ok:false, message:"invalid id" });
+
+    await withTransaction(async(conn)=>{
+      await q(conn, "UPDATE user_history SET pattern_category_id=NULL WHERE user_id=? AND pattern_category_id=?", [req.user.id, id]);
+      const [delRes] = await q(conn, "DELETE FROM user_pattern_categories WHERE user_id=? AND id=?", [req.user.id, id]);
+      if(!delRes || delRes.affectedRows === 0){
+        throw new Error("not found");
+      }
+    });
+
+    sendJson(res, 200, { ok:true });
+  }catch(e){
+    if(String(e.message||"") === "not found"){
+      return sendJson(res, 404, { ok:false, message:"分类不存在" });
+    }
+    sendJson(res, 500, { ok:false, message: e.message });
+  }
+});
+
 app.post("/api/adjust", requireAuth, async (req, res) => {
   try {
     const code = String(req.body?.code || "").toUpperCase();
@@ -915,11 +1025,28 @@ app.post("/api/adjust", requireAuth, async (req, res) => {
       ? req.body?.patternKey
       : null;
     const patternKey = normPatternKey(patternKeyRaw);
+    const patternCategoryRaw = req.body?.patternCategoryId;
     const source = req.body?.source ? String(req.body.source).slice(0, 32) : null;
 
     if (!code) return sendJson(res, 400, { ok: false, message: "missing code" });
     if (!["consume", "restock"].includes(type)) return sendJson(res, 400, { ok: false, message: "invalid type" });
     if (!Number.isFinite(qty) || qty <= 0) return sendJson(res, 400, { ok: false, message: "invalid qty" });
+
+    let patternCategoryId = null;
+    if(type === "consume"){
+      const cid = parseCategoryId(patternCategoryRaw);
+      if(patternCategoryRaw !== undefined && patternCategoryRaw !== null && patternCategoryRaw !== "" && !cid){
+        return sendJson(res, 400, { ok:false, message:"invalid category" });
+      }
+      if(cid){
+        const [[cat]] = await safeQuery(
+          "SELECT id FROM user_pattern_categories WHERE user_id=? AND id=? LIMIT 1",
+          [req.user.id, cid]
+        );
+        if(!cat) return sendJson(res, 400, { ok:false, message:"分类不存在" });
+        patternCategoryId = cid;
+      }
+    }
 
     const delta = type === "consume" ? -Math.abs(Math.floor(qty)) : Math.abs(Math.floor(qty));
 
@@ -962,9 +1089,10 @@ app.post("/api/adjust", requireAuth, async (req, res) => {
     const batchId = newBatchId();
     const finalPatternUrl = type === "consume" ? patternUrl : null;
     const finalPatternKey = type === "consume" ? patternKey : null;
+    const finalPatternCategoryId = type === "consume" ? patternCategoryId : null;
     await safeQuery(
-      "INSERT INTO user_history(user_id, code, htype, qty, pattern, pattern_url, pattern_key, source, batch_id) VALUES(?,?,?,?,?,?,?,?,?)",
-      [req.user.id, code, type, Math.abs(Math.floor(qty)), pattern, finalPatternUrl, finalPatternKey, source, batchId]
+      "INSERT INTO user_history(user_id, code, htype, qty, pattern, pattern_url, pattern_key, pattern_category_id, source, batch_id) VALUES(?,?,?,?,?,?,?,?,?,?)",
+      [req.user.id, code, type, Math.abs(Math.floor(qty)), pattern, finalPatternUrl, finalPatternKey, finalPatternCategoryId, source, batchId]
     );
     sendJson(res, 200, { ok: true });
   } catch (e) {
@@ -1024,6 +1152,8 @@ app.post("/api/adjustBatch", requireAuth, async (req, res) => {
     const patternKeyDefault = Object.prototype.hasOwnProperty.call(req.body || {}, "patternKey")
       ? req.body?.patternKey
       : null;
+    const hasPatternCategoryDefault = Object.prototype.hasOwnProperty.call(req.body || {}, "patternCategoryId");
+    const patternCategoryDefaultRaw = hasPatternCategoryDefault ? req.body?.patternCategoryId : null;
     const sourceDefault = req.body?.source ? String(req.body.source).slice(0, 32) : null;
     const items = Array.isArray(req.body?.items) ? req.body.items : [];
 
@@ -1032,6 +1162,7 @@ app.post("/api/adjustBatch", requireAuth, async (req, res) => {
 
     // Normalize & validate
     const normalized = [];
+    const categoryIdSet = new Set();
     for (const it of items) {
       const code = String(it?.code || "").toUpperCase();
       const qty = Number(it?.qty);
@@ -1045,11 +1176,26 @@ app.post("/api/adjustBatch", requireAuth, async (req, res) => {
         ? it?.patternKey
         : patternKeyDefault;
       const patternKey = normPatternKey(patternKeyRaw);
+      const patternCategoryRaw = Object.prototype.hasOwnProperty.call(it || {}, "patternCategoryId")
+        ? it?.patternCategoryId
+        : patternCategoryDefaultRaw;
       const source = it?.source ? String(it.source).slice(0, 32) : sourceDefault;
 
       if (!code) return sendJson(res, 400, { ok: false, message: "missing code" });
       if (!["consume", "restock"].includes(type)) return sendJson(res, 400, { ok: false, message: "invalid type" });
       if (!Number.isFinite(qty) || qty <= 0) return sendJson(res, 400, { ok: false, message: "invalid qty" });
+
+      let patternCategoryId = null;
+      if(type === "consume"){
+        const cid = parseCategoryId(patternCategoryRaw);
+        if(patternCategoryRaw !== undefined && patternCategoryRaw !== null && patternCategoryRaw !== "" && !cid){
+          return sendJson(res, 400, { ok:false, message:"invalid category" });
+        }
+        if(cid){
+          patternCategoryId = cid;
+          categoryIdSet.add(cid);
+        }
+      }
 
       normalized.push({
         code,
@@ -1058,8 +1204,24 @@ app.post("/api/adjustBatch", requireAuth, async (req, res) => {
         pattern,
         patternUrl: type === "consume" ? patternUrl : null,
         patternKey: type === "consume" ? patternKey : null,
+        patternCategoryId: type === "consume" ? patternCategoryId : null,
         source,
       });
+    }
+
+    if(categoryIdSet.size > 0){
+      const ids = Array.from(categoryIdSet.values());
+      const inPh = ids.map(()=>"?").join(",");
+      const [rows] = await safeQuery(
+        `SELECT id FROM user_pattern_categories WHERE user_id=? AND id IN (${inPh})`,
+        [req.user.id, ...ids]
+      );
+      const found = new Set((rows||[]).map(r=>Number(r.id)));
+      for(const id of ids){
+        if(!found.has(id)){
+          return sendJson(res, 400, { ok:false, message:"分类不存在" });
+        }
+      }
     }
 
     // Aggregate inventory delta per code
@@ -1152,10 +1314,10 @@ app.post("/api/adjustBatch", requireAuth, async (req, res) => {
         const vals = [];
         const params = [];
         for (const it of normalized) {
-          vals.push("(?,?,?,?,?,?,?,?,?)");
-          params.push(req.user.id, it.code, it.type, it.qty, it.pattern, it.patternUrl, it.patternKey, it.source, batchId);
+          vals.push("(?,?,?,?,?,?,?,?,?,?)");
+          params.push(req.user.id, it.code, it.type, it.qty, it.pattern, it.patternUrl, it.patternKey, it.patternCategoryId, it.source, batchId);
         }
-        await q(conn, `INSERT INTO user_history(user_id, code, htype, qty, pattern, pattern_url, pattern_key, source, batch_id) VALUES ${vals.join(",")}`, params);
+        await q(conn, `INSERT INTO user_history(user_id, code, htype, qty, pattern, pattern_url, pattern_key, pattern_category_id, source, batch_id) VALUES ${vals.join(",")}`, params);
       }
     });
 
@@ -1242,27 +1404,35 @@ app.get("/api/recordGroups", requireAuth, async (req, res) => {
   try{
     const type = String(req.query?.type || "").toLowerCase();
     const onlyWithPattern = String(req.query?.onlyWithPattern || "") === "1";
+    const rawCategory = req.query?.patternCategoryId;
+    const categoryId = (type === "consume") ? parseCategoryId(rawCategory) : null;
 
     if(!["consume","restock"].includes(type)){
       return sendJson(res, 400, { ok:false, message:"invalid type" });
     }
+    if(type === "consume" && rawCategory !== undefined && rawCategory !== null && rawCategory !== "" && !categoryId){
+      return sendJson(res, 400, { ok:false, message:"invalid category" });
+    }
 
     const patternClause = (type==="consume" && onlyWithPattern) ? " AND pattern IS NOT NULL AND pattern<>'' " : "";
+    const categoryClause = (type==="consume" && categoryId) ? " AND pattern_category_id=? " : "";
 
     const [rows] = await safeQuery(
       `
-      SELECT gid, ts, pattern, patternUrl, patternKey, total FROM (
+      SELECT gid, ts, pattern, patternUrl, patternKey, patternCategoryId, total FROM (
         SELECT
           CONCAT('b:', batch_id) AS gid,
           UNIX_TIMESTAMP(MAX(created_at))*1000 AS ts,
           MAX(pattern) AS pattern,
           MAX(pattern_url) AS patternUrl,
           MAX(pattern_key) AS patternKey,
+          MAX(pattern_category_id) AS patternCategoryId,
           SUM(qty) AS total,
           MAX(id) AS maxId
         FROM user_history
         WHERE user_id=? AND htype=? AND batch_id IS NOT NULL
         ${patternClause}
+        ${categoryClause}
         GROUP BY batch_id
 
         UNION ALL
@@ -1273,16 +1443,25 @@ app.get("/api/recordGroups", requireAuth, async (req, res) => {
           MAX(pattern) AS pattern,
           MAX(pattern_url) AS patternUrl,
           MAX(pattern_key) AS patternKey,
+          MAX(pattern_category_id) AS patternCategoryId,
           SUM(qty) AS total,
           MAX(id) AS maxId
         FROM user_history
         WHERE user_id=? AND htype=? AND batch_id IS NULL
         ${patternClause}
-        GROUP BY created_at, IFNULL(pattern,''), IFNULL(source,'')
+        ${categoryClause}
+        GROUP BY created_at, IFNULL(pattern,''), IFNULL(source,''), IFNULL(pattern_category_id,0)
       ) t
       ORDER BY t.ts DESC, t.maxId DESC
       `,
-      [req.user.id, type, req.user.id, type]
+      [
+        req.user.id,
+        type,
+        ...(categoryClause ? [categoryId] : []),
+        req.user.id,
+        type,
+        ...(categoryClause ? [categoryId] : [])
+      ]
     );
 
     sendJson(res, 200, { ok:true, data: rows, buildTag: BUILD_TAG });
@@ -1318,7 +1497,7 @@ app.get("/api/recordGroupDetail", requireAuth, async (req, res) => {
         return sendJson(res, 400, { ok:false, message:"invalid gid" });
       }
       const [[base]] = await safeQuery(
-        `SELECT created_at, IFNULL(pattern,'') AS patternKey, IFNULL(source,'') AS sourceKey
+        `SELECT created_at, IFNULL(pattern,'') AS patternKey, IFNULL(source,'') AS sourceKey, IFNULL(pattern_category_id,0) AS categoryKey
          FROM user_history
          WHERE user_id=? AND id=? AND htype=? LIMIT 1`,
         [req.user.id, anchorId, type]
@@ -1330,10 +1509,10 @@ app.get("/api/recordGroupDetail", requireAuth, async (req, res) => {
          FROM user_history h
          LEFT JOIN palette p ON p.code=h.code
          WHERE h.user_id=? AND h.htype=? AND h.batch_id IS NULL
-           AND h.created_at=? AND IFNULL(h.pattern,'')=? AND IFNULL(h.source,'')=?
+           AND h.created_at=? AND IFNULL(h.pattern,'')=? AND IFNULL(h.source,'')=? AND IFNULL(h.pattern_category_id,0)=?
          GROUP BY h.code
          ORDER BY qty DESC, h.code ASC`,
-        [req.user.id, type, base.created_at, base.patternKey, base.sourceKey]
+        [req.user.id, type, base.created_at, base.patternKey, base.sourceKey, base.categoryKey]
       );
       return sendJson(res, 200, { ok:true, data: rows, buildTag: BUILD_TAG });
     }
@@ -1356,6 +1535,8 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
     const patternUrlRaw = hasPatternUrl ? req.body?.patternUrl : null;
     const hasPatternKey = Object.prototype.hasOwnProperty.call(req.body || {}, "patternKey");
     const patternKeyRaw = hasPatternKey ? req.body?.patternKey : null;
+    const hasPatternCategoryId = Object.prototype.hasOwnProperty.call(req.body || {}, "patternCategoryId");
+    const patternCategoryRaw = hasPatternCategoryId ? req.body?.patternCategoryId : null;
 
     if(!gid) return sendJson(res, 400, { ok:false, message:"missing gid" });
     if(!["consume","restock"].includes(type)) return sendJson(res, 400, { ok:false, message:"invalid type" });
@@ -1370,6 +1551,21 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
     const pattern = hasPattern ? normPattern(patternRaw) : null;
     const patternUrl = hasPatternUrl ? normPatternUrl(patternUrlRaw) : null;
     const patternKey = hasPatternKey ? normPatternKey(patternKeyRaw) : null;
+    let patternCategoryId = null;
+    if(type === "consume" && hasPatternCategoryId){
+      const cid = parseCategoryId(patternCategoryRaw);
+      if(patternCategoryRaw !== null && patternCategoryRaw !== undefined && patternCategoryRaw !== "" && !cid){
+        return sendJson(res, 400, { ok:false, message:"invalid category" });
+      }
+      if(cid){
+        const [[cat]] = await safeQuery(
+          "SELECT id FROM user_pattern_categories WHERE user_id=? AND id=? LIMIT 1",
+          [req.user.id, cid]
+        );
+        if(!cat) return sendJson(res, 400, { ok:false, message:"分类不存在" });
+        patternCategoryId = cid;
+      }
+    }
 
     // Normalize items (merge same code)
     const newMap = new Map();
@@ -1392,12 +1588,14 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
     let basePatternUrl = null;
     let baseSource = null;
     let basePatternKey = null;
+    let basePatternCategoryId = null;
+    let basePatternCategoryKey = 0;
 
     if(gid.startsWith("b:")){
       batchId = gid.slice(2);
       if(!batchId) return sendJson(res, 400, { ok:false, message:"invalid gid" });
       const [[base]] = await safeQuery(
-        `SELECT MAX(created_at) AS created_at, MAX(pattern) AS pattern, MAX(pattern_url) AS pattern_url, MAX(pattern_key) AS pattern_key, MAX(source) AS source
+        `SELECT MAX(created_at) AS created_at, MAX(pattern) AS pattern, MAX(pattern_url) AS pattern_url, MAX(pattern_key) AS pattern_key, MAX(source) AS source, MAX(pattern_category_id) AS pattern_category_id
          FROM user_history
          WHERE user_id=? AND htype=? AND batch_id=?`,
         [req.user.id, type, batchId]
@@ -1410,6 +1608,8 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
       basePatternUrl = base.pattern_url;
       baseSource = base.source;
       basePatternKey = base.pattern_key;
+      basePatternCategoryId = base.pattern_category_id === null || base.pattern_category_id === undefined ? null : Number(base.pattern_category_id);
+      basePatternCategoryKey = basePatternCategoryId ? Number(basePatternCategoryId) : 0;
       whereSql = " AND batch_id=? ";
       whereParams = [batchId];
     }else if(gid.startsWith("i:")){
@@ -1418,7 +1618,7 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
         return sendJson(res, 400, { ok:false, message:"invalid gid" });
       }
       const [[base]] = await safeQuery(
-        `SELECT created_at, IFNULL(pattern,'') AS patternNameKey, IFNULL(pattern_url,'') AS patternUrlKey, IFNULL(pattern_key,'') AS patternObjKey, IFNULL(source,'') AS sourceKey
+        `SELECT created_at, IFNULL(pattern,'') AS patternNameKey, IFNULL(pattern_url,'') AS patternUrlKey, IFNULL(pattern_key,'') AS patternObjKey, IFNULL(source,'') AS sourceKey, IFNULL(pattern_category_id,0) AS categoryKey
          FROM user_history
          WHERE user_id=? AND id=? AND htype=? LIMIT 1`,
         [req.user.id, anchorId, type]
@@ -1429,8 +1629,10 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
       basePatternUrl = base.patternUrlKey;
       baseSource = base.sourceKey;
       basePatternKey = base.patternObjKey;
-      whereSql = " AND batch_id IS NULL AND created_at=? AND IFNULL(pattern,'')=? AND IFNULL(source,'')=? ";
-      whereParams = [baseCreatedAt, basePattern, baseSource];
+      basePatternCategoryKey = Number(base.categoryKey) || 0;
+      basePatternCategoryId = basePatternCategoryKey > 0 ? basePatternCategoryKey : null;
+      whereSql = " AND batch_id IS NULL AND created_at=? AND IFNULL(pattern,'')=? AND IFNULL(source,'')=? AND IFNULL(pattern_category_id,0)=? ";
+      whereParams = [baseCreatedAt, basePattern, baseSource, basePatternCategoryKey];
     }else{
       return sendJson(res, 400, { ok:false, message:"invalid gid" });
     }
@@ -1517,6 +1719,11 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
       if(hasPatternKey) return patternKey;
       return base;
     })();
+    const finalPatternCategoryId = (() => {
+      if(type !== "consume") return null;
+      if(hasPatternCategoryId) return patternCategoryId;
+      return basePatternCategoryId;
+    })();
     const finalSource = (() => {
       const s = (baseSource === null || baseSource === undefined) ? "" : String(baseSource);
       const t = s.trim();
@@ -1565,12 +1772,12 @@ app.post("/api/recordGroupUpdate", requireAuth, async (req, res) => {
       const vals = [];
       const params = [];
       for(const it of normalized){
-        vals.push("(?,?,?,?,?,?,?,?,?,?)");
-        params.push(req.user.id, it.code, type, it.qty, finalPattern, finalPatternUrl, finalPatternKey, finalSource, batchId, createdAt);
+        vals.push("(?,?,?,?,?,?,?,?,?,?,?)");
+        params.push(req.user.id, it.code, type, it.qty, finalPattern, finalPatternUrl, finalPatternKey, finalPatternCategoryId, finalSource, batchId, createdAt);
       }
       await q(
         conn,
-        `INSERT INTO user_history(user_id, code, htype, qty, pattern, pattern_url, pattern_key, source, batch_id, created_at)
+        `INSERT INTO user_history(user_id, code, htype, qty, pattern, pattern_url, pattern_key, pattern_category_id, source, batch_id, created_at)
          VALUES ${vals.join(",")}`,
         params
       );
@@ -1639,7 +1846,7 @@ app.post("/api/recordGroupDelete", requireAuth, async (req, res) => {
         const anchorId = Number(gid.slice(2));
         const [[base]] = await q(
           conn,
-          `SELECT created_at, IFNULL(pattern,'') AS patternKey, IFNULL(source,'') AS sourceKey
+          `SELECT created_at, IFNULL(pattern,'') AS patternKey, IFNULL(source,'') AS sourceKey, IFNULL(pattern_category_id,0) AS categoryKey
            FROM user_history
            WHERE user_id=? AND id=? AND htype=? LIMIT 1`,
           [req.user.id, anchorId, type]
@@ -1647,8 +1854,8 @@ app.post("/api/recordGroupDelete", requireAuth, async (req, res) => {
         if(!base) throw new Error("group not found");
         await applyDeltaAndDelete(
           conn,
-          " AND batch_id IS NULL AND created_at=? AND IFNULL(pattern,'')=? AND IFNULL(source,'')=? ",
-          [base.created_at, base.patternKey, base.sourceKey]
+          " AND batch_id IS NULL AND created_at=? AND IFNULL(pattern,'')=? AND IFNULL(source,'')=? AND IFNULL(pattern_category_id,0)=? ",
+          [base.created_at, base.patternKey, base.sourceKey, Number(base.categoryKey) || 0]
         );
         return;
       }

@@ -779,6 +779,64 @@ main{
       background:transparent;
       color:var(--muted);
     }
+
+    .category-tabs{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin:4px 0;
+    }
+    .category-scroll{
+      display:flex;
+      gap:6px;
+      overflow-x:auto;
+      padding:1px 0;
+      scroll-snap-type:x mandatory;
+      scrollbar-width:thin;
+    }
+    .category-chip{
+      scroll-snap-align:start;
+      border:1px solid var(--border);
+      background:var(--panel-2);
+      color:var(--muted);
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:11px;
+      white-space:nowrap;
+      cursor:pointer;
+      transition:.15s ease;
+    }
+    .category-chip.active{
+      color:var(--text);
+      border-color: rgba(125,211,252,.35);
+      background: linear-gradient(135deg, rgba(125,211,252,.18), rgba(125,211,252,.05));
+    }
+    .category-chip:hover{ transform: translateY(-1px); }
+
+    .empty-illus{
+      width:44px;
+      height:30px;
+      margin:0 auto 6px;
+      border-radius:10px;
+      border:1px dashed var(--border);
+      position:relative;
+      background: rgba(255,255,255,.02);
+    }
+    .empty-illus::before{
+      content:"";
+      position:absolute;
+      left:8px;
+      right:8px;
+      top:9px;
+      height:2px;
+      border-radius:999px;
+      background: rgba(255,255,255,.15);
+    }
+    .empty-text{
+      text-align:center;
+      font-size:11px;
+      color:var(--muted);
+    }
     .tab-nav button.active{
       background: radial-gradient(circle at 30% 0, rgba(125,211,252,.3), rgba(167,139,250,.4));
       color:var(--text);
@@ -1108,7 +1166,7 @@ main{
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      padding:10px 12px;
+      padding:8px 10px;
       border:1px solid var(--border);
       border-radius:12px;
       background:var(--panel);
@@ -1123,12 +1181,42 @@ main{
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
-      font-size:14px;
+      font-size:12px;
     }
     .series-row .btn-secondary,
     .series-row .btn-danger{
       flex:0 0 auto;
       white-space:nowrap;
+    }
+
+    .category-list{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin-top:10px;
+    }
+    .category-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:8px 10px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:var(--panel);
+    }
+    .category-name{
+      font-size:12px;
+      font-weight:600;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .series-row button,
+    .category-row button{
+      padding:6px 12px;
+      font-size:11px;
+      border-radius:10px;
     }
 
     .series-section{
@@ -2268,6 +2356,10 @@ body.theme-light #recordsDialog .records-restock .record-thumb::after{
               <input type="text" id="consumeManualPattern" placeholder="建议填写，20字以内" maxlength="20" />
             </div>
             <div class="modal-field">
+              <label for="consumeManualCategory">图纸分类</label>
+              <select id="consumeManualCategory"></select>
+            </div>
+            <div class="modal-field">
               <label>上传图纸（选填）</label>
               <div class="file-upload">
                 <label class="file-upload-label" for="consumeManualImage">
@@ -2294,7 +2386,10 @@ body.theme-light #recordsDialog .records-restock .record-thumb::after{
             <div class="modal-field">
               <label for="consumeBatchPattern">图纸名称（选填）</label>
               <input type="text" id="consumeBatchPattern" placeholder="建议填写，20字以内" maxlength="20" />
-              <div class="help">图纸名称将在色号的消耗明细中展示</div>
+            </div>
+            <div class="modal-field">
+              <label for="consumeBatchCategory">图纸分类</label>
+              <select id="consumeBatchCategory"></select>
             </div>
             <div class="modal-field">
               <label>上传图纸（选填）</label>
@@ -2324,10 +2419,14 @@ body.theme-light #recordsDialog .records-restock .record-thumb::after{
             <div class="modal-field">
               <label for="consumeAiPattern">图纸名称（选填）</label>
               <input type="text" id="consumeAiPattern" placeholder="建议填写，20字以内" maxlength="20" />
-              <div class="help">图纸名称将在色号的消耗明细中展示</div>
+            </div>
+            <div class="modal-field">
+              <label for="consumeAiCategory">图纸分类</label>
+              <select id="consumeAiCategory"></select>
             </div>
 
             <div class="modal-field">
+              <label>上传图纸</label>
               <div class="file-upload">
                 <label class="file-upload-label" for="consumeAiImage">
                   <span class="file-upload-title">选择图纸</span>
@@ -2492,6 +2591,9 @@ body.theme-light #recordsDialog .records-restock .record-thumb::after{
             <button type="button" class="tab-btn" data-tab="records-restock">补充记录</button>
             <button type="button" class="tab-btn" data-tab="records-stats">消耗统计</button>
           </div>
+          <div class="category-tabs" id="recordsCategoryBar">
+            <div class="category-scroll" id="recordsCategoryList" aria-label="图纸分类"></div>
+          </div>
 
           <div class="tab-panel active" id="recordsConsumePanel">
             <div class="records-table records-consume">
@@ -2568,12 +2670,27 @@ body.theme-light #recordsDialog .records-restock .record-thumb::after{
 
       <section class="panel">
         <div class="panel-title">
+          <h2>图纸分类</h2>
+        </div>
+        <div class="modal-field">
+          <div class="inline-field">
+            <input id="patternCategoryInput" type="text" maxlength="12" placeholder="例如：卡通（最多6个字）" />
+            <div class="settings-actions">
+              <button id="patternCategoryAdd" class="btn-primary" type="button">新增分类</button>
+            </div>
+          </div>
+        </div>
+        <div id="patternCategoryList" class="category-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
           <h2>添加色号</h2>
         </div>
         <div class="modal-field">
           <label for="addCodeInput">可添加MARD色号，默认库存为0</label>
           <div class="inline-field">
-            <input id="addCodeInput" type="text" maxlength="6" placeholder="例如 A1 / F11" />
+            <input id="addCodeInput" type="text" maxlength="6" placeholder="例如：F11" />
             <div class="settings-actions">
               <button id="addCodeSubmit" class="btn-primary" type="button">保存</button>
             </div>
@@ -2875,6 +2992,9 @@ const API_BASE = window.location.origin;
     let LAST_SYNC = null;
     let CRITICAL_THRESHOLD = 300;
     let SORT_MODE = null; // null | 'asc' | 'desc'
+    let PATTERN_CATEGORIES = [];
+    let ACTIVE_PATTERN_CATEGORY_ID = null;
+    const MAX_PATTERN_CATEGORIES = 10;
 
     // ====== View Mode (固定紧凑) ======
     let VIEW_MODE = "compact";
@@ -3284,7 +3404,7 @@ const API_BASE = window.location.origin;
     let IS_LOGGED_IN = false;
     let USERNAME = "";
 
-    // guest history: {gid, code, ts, type, qty, pattern, source}
+    // guest history: {gid, code, ts, type, qty, pattern, patternCategoryId, source}
     let GUEST_HISTORY = [];
 
     function saveGuest(){
@@ -3293,7 +3413,8 @@ const API_BASE = window.location.origin;
           colors: COLORS,
           inventory: INVENTORY,
 critical: CRITICAL_THRESHOLD,
-          history: GUEST_HISTORY
+          history: GUEST_HISTORY,
+          patternCategories: PATTERN_CATEGORIES
         }));
       }catch{}
     }
@@ -3308,6 +3429,7 @@ critical: CRITICAL_THRESHOLD,
           INVENTORY = data.inventory || {};
 CRITICAL_THRESHOLD = Number(data.critical ?? 300) || 300;
           GUEST_HISTORY = Array.isArray(data.history) ? data.history : [];
+          PATTERN_CATEGORIES = Array.isArray(data.patternCategories) ? data.patternCategories : [];
           return true;
         }
       }catch{}
@@ -3345,6 +3467,7 @@ CRITICAL_THRESHOLD = Number(data.critical ?? 300) || 300;
         });
       }
       LAST_SYNC = null;
+      PATTERN_CATEGORIES = [];
       saveGuest();
     }
 
@@ -3409,6 +3532,28 @@ function formatTimeSecondParts(iso){
       return a.localeCompare(b);
     }
 
+    function normalizeCategoryName(name){
+      return String(name || "").trim();
+    }
+    function categoryDisplayLength(name){
+      let len = 0;
+      const s = String(name || "");
+      for(const ch of s){
+        len += /[^\x00-\xff]/.test(ch) ? 2 : 1;
+      }
+      return len;
+    }
+    function isCategoryNameDuplicate(name, excludeId){
+      const target = normalizeCategoryName(name).toLowerCase();
+      if(!target) return false;
+      return (PATTERN_CATEGORIES || []).some(c=>{
+        const id = (c && c.id !== undefined && c.id !== null) ? String(c.id) : "";
+        if(excludeId && String(excludeId) === id) return false;
+        const cn = normalizeCategoryName(c?.name || "").toLowerCase();
+        return cn === target;
+      });
+    }
+
 
     function _guestGroupKey(h){
       const g0 = h && h.gid ? String(h.gid) : "";
@@ -3417,7 +3562,8 @@ function formatTimeSecondParts(iso){
       const pattern = String(h?.pattern || "");
       const source = String(h?.source || "");
       const type = String(h?.type || "");
-      return `legacy:${ts}|${pattern}|${source}|${type}`;
+      const cat = String(h?.patternCategoryId ?? "");
+      return `legacy:${ts}|${pattern}|${source}|${type}|${cat}`;
     }
 
     function buildGuestRecordGroups(type, onlyWithPattern){
@@ -3428,16 +3574,18 @@ function formatTimeSecondParts(iso){
         if(String(h?.type||"").toLowerCase() !== type) continue;
         const pat = String(h?.pattern || "");
         if(onlyWithPattern && !pat) continue;
+        const cat = (h?.patternCategoryId === null || h?.patternCategoryId === undefined) ? null : h.patternCategoryId;
 
         const key = _guestGroupKey(h);
         let g = groups.get(key);
         if(!g){
-          g = {gid:key, ts:h.ts, pattern: pat || "", total:0, _items:[]};
+          g = {gid:key, ts:h.ts, pattern: pat || "", patternCategoryId: cat, total:0, _items:[]};
           groups.set(key, g);
         }
         g.total += Number(h?.qty||0) || 0;
         if(String(h?.ts||"") > String(g.ts||"")) g.ts = h.ts;
         if(!g.pattern && pat) g.pattern = pat;
+        if(g.patternCategoryId === null && cat !== null) g.patternCategoryId = cat;
         g._items.push(h);
       }
 
@@ -3451,7 +3599,7 @@ function formatTimeSecondParts(iso){
         }
         const detail = Array.from(by.entries()).map(([code,qty])=>({code, qty}))
           .sort((a,b)=> (b.qty-a.qty) || sortCodes(a.code,b.code));
-        out.push({gid:g.gid, ts:g.ts, pattern:g.pattern, total:g.total, detail});
+        out.push({gid:g.gid, ts:g.ts, pattern:g.pattern, patternCategoryId: g.patternCategoryId, total:g.total, detail});
       }
       out.sort((a,b)=> String(b.ts||"").localeCompare(String(a.ts||"")));
       return out;
@@ -3519,6 +3667,10 @@ function formatTimeSecondParts(iso){
         if(path==="/api/settings"){
           return {ok:true, criticalThreshold: CRITICAL_THRESHOLD};
         }
+        if(path==="/api/patternCategories"){
+          const data = Array.isArray(PATTERN_CATEGORIES) ? PATTERN_CATEGORIES.slice() : [];
+          return {ok:true, data};
+        }
         if(path.startsWith("/api/history")){
           const url = new URL(apiUrl(path));
           const code = (url.searchParams.get("code")||"").toUpperCase();
@@ -3529,7 +3681,11 @@ function formatTimeSecondParts(iso){
           const url = new URL(apiUrl(path));
           const type = String(url.searchParams.get("type")||"").toLowerCase();
           const only = url.searchParams.get("onlyWithPattern")==="1";
-          const data = buildGuestRecordGroups(type, only);
+          const cat = url.searchParams.get("patternCategoryId");
+          let data = buildGuestRecordGroups(type, only);
+          if(type==="consume" && cat){
+            data = data.filter(g=> String(g?.patternCategoryId ?? "") === String(cat));
+          }
           return {ok:true, data};
         }
         if(path.startsWith("/api/recordGroupDetail")){
@@ -3616,6 +3772,35 @@ function formatTimeSecondParts(iso){
       // guest local short-circuit
       if(!IS_LOGGED_IN){
 
+        if(path==="/api/patternCategories"){
+          const name = normalizeCategoryName(data?.name);
+          if(!name) throw new Error("请输入分类名称");
+          if(categoryDisplayLength(name) > 12) throw new Error("分类名称最多6个中文或12个英文");
+          if(isCategoryNameDuplicate(name)) throw new Error("分类已存在");
+          if((PATTERN_CATEGORIES||[]).length >= MAX_PATTERN_CATEGORIES){
+            throw new Error(`最多只能创建${MAX_PATTERN_CATEGORIES}个分类`);
+          }
+          const id = newRequestId();
+          PATTERN_CATEGORIES = Array.isArray(PATTERN_CATEGORIES) ? PATTERN_CATEGORIES : [];
+          PATTERN_CATEGORIES.push({id, name, createdAt: new Date().toISOString()});
+          saveGuest();
+          return {ok:true, id, name};
+        }
+
+        if(path==="/api/patternCategoryDelete"){
+          const id = data?.id;
+          if(!id) throw new Error("invalid id");
+          PATTERN_CATEGORIES = (PATTERN_CATEGORIES||[]).filter(c=> String(c?.id||"") !== String(id));
+          GUEST_HISTORY = (GUEST_HISTORY||[]).map(h=>{
+            if(String(h?.patternCategoryId ?? "") === String(id)){
+              return {...h, patternCategoryId: null};
+            }
+            return h;
+          });
+          saveGuest();
+          return {ok:true};
+        }
+
         if(path==="/api/recordGroupDelete"){
           const gid = String(data?.gid||"");
           const type = String(data?.type||"").toLowerCase();
@@ -3633,6 +3818,8 @@ function formatTimeSecondParts(iso){
           const hasPattern = Object.prototype.hasOwnProperty.call(data || {}, "pattern");
           const patternRaw = hasPattern ? String(data?.pattern || "").trim() : "";
           const pattern = (hasPattern && patternRaw) ? patternRaw : null;
+          const hasPatternCategory = Object.prototype.hasOwnProperty.call(data || {}, "patternCategoryId");
+          const patternCategoryValue = hasPatternCategory ? data?.patternCategoryId : null;
           if(!gid) throw new Error("missing gid");
           if(!["consume","restock"].includes(type)) throw new Error("invalid type");
           if(items.length===0) throw new Error("invalid items");
@@ -3649,9 +3836,13 @@ function formatTimeSecondParts(iso){
           }, groupItems[0]?.ts);
           const baseSource = String(groupItems[0]?.source || "");
           const basePattern = String(groupItems[0]?.pattern || "");
+          const basePatternCategory = (groupItems[0]?.patternCategoryId === undefined) ? null : groupItems[0]?.patternCategoryId;
           const finalPattern = type==="consume"
             ? (hasPattern ? pattern : (basePattern || null))
             : (basePattern || null);
+          const finalPatternCategoryId = type==="consume"
+            ? (hasPatternCategory ? (patternCategoryValue ?? null) : (basePatternCategory ?? null))
+            : null;
 
           const oldMap = new Map();
           groupItems.forEach(it=>{
@@ -3694,6 +3885,7 @@ function formatTimeSecondParts(iso){
               type,
               qty,
               pattern: finalPattern,
+              patternCategoryId: finalPatternCategoryId,
               source: baseSource
             });
           }
@@ -3706,6 +3898,7 @@ function formatTimeSecondParts(iso){
           const type = String(data?.type||"");
           const qty = Number(data?.qty);
           const pattern = data?.pattern || null;
+          const patternCategoryId = type==="consume" ? (data?.patternCategoryId ?? null) : null;
           if(!code) throw new Error("invalid code");
 	          if(!(code in INVENTORY) || !(code in COLORS)) throw new Error("unknown code");
           if(!Number.isInteger(qty) || qty<=0) throw new Error("invalid qty");
@@ -3723,6 +3916,7 @@ function formatTimeSecondParts(iso){
             type,
             qty,
             pattern,
+            patternCategoryId,
             source: String(data?.source||"manual")
           });
           saveGuest();
@@ -3739,6 +3933,7 @@ function formatTimeSecondParts(iso){
             const type = String(it?.type||"");
             const qty = Number(it?.qty);
             const pattern = it?.pattern || null;
+            const patternCategoryId = type==="consume" ? (it?.patternCategoryId ?? data?.patternCategoryId ?? null) : null;
             if(!code) throw new Error("invalid code");
 	            if(!(code in INVENTORY) || !(code in COLORS)) throw new Error("unknown code");
             if(!Number.isInteger(qty) || qty<=0) throw new Error("invalid qty");
@@ -3753,6 +3948,7 @@ function formatTimeSecondParts(iso){
               type,
               qty,
               pattern,
+              patternCategoryId,
               source: String(it?.source||"manual")
             });
           }
@@ -4792,17 +4988,20 @@ function toast(message,type="success"){
     // 记录消耗
     const consumeDialog=document.getElementById("consumeDialog");
     const consumeManualPatternInput=document.getElementById("consumeManualPattern");
+    const consumeManualCategorySelect=document.getElementById("consumeManualCategory");
     const consumeManualRows=document.getElementById("consumeManualRows");
     const consumeManualImageInput=document.getElementById("consumeManualImage");
     const consumeManualImageName=document.getElementById("consumeManualImageName");
     const consumeFileInput=document.getElementById("consumeFile");
     const consumeFileName=document.getElementById("consumeFileName");
     const consumeBatchPatternInput=document.getElementById("consumeBatchPattern");
+    const consumeBatchCategorySelect=document.getElementById("consumeBatchCategory");
     const consumeBatchImageInput=document.getElementById("consumeBatchImage");
     const consumeBatchImageName=document.getElementById("consumeBatchImageName");
 
     // 图纸识别（AI）
     const consumeAiPatternInput=document.getElementById("consumeAiPattern");
+    const consumeAiCategorySelect=document.getElementById("consumeAiCategory");
     const consumeAiImageInput=document.getElementById("consumeAiImage");
     const consumeAiImageName=document.getElementById("consumeAiImageName");
     const consumeAiRecognizeBtn=document.getElementById("consumeAiRecognize");
@@ -4996,15 +5195,18 @@ function toast(message,type="success"){
 
     document.getElementById("btnConsume").addEventListener("click",()=>{
       consumeManualPatternInput.value="";
+      if(consumeManualCategorySelect) consumeManualCategorySelect.value="";
       if(consumeManualImageInput) consumeManualImageInput.value="";
       if(consumeManualImageName) consumeManualImageName.textContent="未选择图纸";
       if(consumeBatchPatternInput) consumeBatchPatternInput.value="";
+      if(consumeBatchCategorySelect) consumeBatchCategorySelect.value="";
       if(consumeBatchImageInput) consumeBatchImageInput.value="";
       if(consumeBatchImageName) consumeBatchImageName.textContent="未选择图纸";
       if(consumeFileInput) consumeFileInput.value="";
       if(consumeFileName) consumeFileName.textContent="未选择文件";
       // AI reset
       consumeAiPatternInput.value="";
+      if(consumeAiCategorySelect) consumeAiCategorySelect.value="";
       consumeAiImageInput.value="";
       consumeAiImageName.textContent="未选择图纸";
       consumeAiRecognizedFile = null;
@@ -5061,6 +5263,7 @@ function toast(message,type="success"){
           if(rows.length===0){toast("请至少添加一条记录","error");return;}
           const pattern=consumeManualPatternInput.value.trim();
           if(pattern.length>20){toast("图纸名称不超过 20 字","error");return;}
+          const patternCategoryId = (consumeManualCategorySelect?.value || "").trim() || null;
           const items=[];
           for(const row of rows){
             const inputs=row.querySelectorAll("input");
@@ -5097,6 +5300,7 @@ function toast(message,type="success"){
               source:"form"
             }))
           };
+          if(patternCategoryId) payload.patternCategoryId = patternCategoryId;
           if(patternUpload?.cdnUrl) payload.patternUrl = patternUpload.cdnUrl;
           if(patternUpload?.objectKey) payload.patternKey = patternUpload.objectKey;
 
@@ -5109,6 +5313,7 @@ function toast(message,type="success"){
         }else if(consumeTabsState.active==="consume-batch"){
           const pattern=(consumeBatchPatternInput?.value || "").trim();
           if(pattern.length>20){toast("图纸名称不超过 20 字","error");return;}
+          const patternCategoryId = (consumeBatchCategorySelect?.value || "").trim() || null;
           const file=consumeFileInput?.files?.[0];
           if(!file){toast("请先选择 CSV 文件","error");return;}
           const text=await readFileText(file);
@@ -5130,6 +5335,7 @@ function toast(message,type="success"){
               source:"csv"
             }))
           };
+          if(patternCategoryId) payload.patternCategoryId = patternCategoryId;
           if(patternUpload?.cdnUrl) payload.patternUrl = patternUpload.cdnUrl;
           if(patternUpload?.objectKey) payload.patternKey = patternUpload.objectKey;
 
@@ -5142,6 +5348,7 @@ function toast(message,type="success"){
         }else if(consumeTabsState.active==="consume-ai"){
           const pattern=consumeAiPatternInput.value.trim();
           if(pattern.length>20){toast("图纸名称不超过 20 字","error");return;}
+          const patternCategoryId = (consumeAiCategorySelect?.value || "").trim() || null;
           const rows=Array.from(consumeAiTbody.querySelectorAll("tr"));
           if(rows.length===0){toast("请先识别图片，或手动补充识别结果","error");return;}
           const items=[];
@@ -5168,6 +5375,7 @@ function toast(message,type="success"){
               source:"image"
             }))
           };
+          if(patternCategoryId) payload.patternCategoryId = patternCategoryId;
           if(patternUpload?.cdnUrl) payload.patternUrl = patternUpload.cdnUrl;
           if(patternUpload?.objectKey) payload.patternKey = patternUpload.objectKey;
 
@@ -5668,6 +5876,9 @@ function toast(message,type="success"){
         // 设置 + 添加色号
 const criticalInput=document.getElementById("criticalInput");
     const seriesListEl=document.getElementById("seriesList");
+    const patternCategoryInput = document.getElementById("patternCategoryInput");
+    const patternCategoryAdd = document.getElementById("patternCategoryAdd");
+    const patternCategoryList = document.getElementById("patternCategoryList");
 	    const addCodeInput=document.getElementById("addCodeInput");
 	    const addCodeSubmit=document.getElementById("addCodeSubmit");
     const settingsPrimaryBtn=document.getElementById("settingsPrimary");
@@ -5726,6 +5937,143 @@ const criticalInput=document.getElementById("criticalInput");
       });
     }
 
+    function normalizeCategoryList(list){
+      return (list||[])
+        .map(c=>{
+          const id = (c && c.id !== undefined && c.id !== null) ? String(c.id) : "";
+          const name = normalizeCategoryName(c?.name || "");
+          const createdAt = c?.createdAt || c?.created_at || "";
+          return {id, name, createdAt};
+        })
+        .filter(c=>c.id && c.name);
+    }
+
+    function renderPatternCategoryManager(){
+      if(!patternCategoryList) return;
+      patternCategoryList.innerHTML = "";
+      const list = Array.isArray(PATTERN_CATEGORIES) ? PATTERN_CATEGORIES : [];
+      if(list.length===0){
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "暂无分类";
+        patternCategoryList.appendChild(empty);
+        return;
+      }
+      list.forEach(cat=>{
+        const row = document.createElement("div");
+        row.className = "category-row";
+
+        const name = document.createElement("div");
+        name.className = "category-name";
+        name.textContent = cat.name;
+
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "btn-danger";
+        del.textContent = "删除";
+        del.addEventListener("click", async()=>{
+          const ok = confirm(`删除分类将清空已标记为该分类的图纸分类信息，是否确认删除？\n\n分类：${cat.name}`);
+          if(!ok) return;
+          try{
+            await apiPost("/api/patternCategoryDelete", {id: cat.id});
+            if(ACTIVE_PATTERN_CATEGORY_ID && String(ACTIVE_PATTERN_CATEGORY_ID) === String(cat.id)){
+              ACTIVE_PATTERN_CATEGORY_ID = null;
+            }
+            await loadPatternCategories();
+            toast("删除成功","success");
+          }catch(e){
+            toast(e?.message || "删除失败","error");
+          }
+        });
+
+        row.appendChild(name);
+        row.appendChild(del);
+        patternCategoryList.appendChild(row);
+      });
+    }
+
+    function renderPatternCategorySelects(){
+      const selects = [
+        document.getElementById("consumeManualCategory"),
+        document.getElementById("consumeBatchCategory"),
+        document.getElementById("consumeAiCategory")
+      ].filter(Boolean);
+      const list = Array.isArray(PATTERN_CATEGORIES) ? PATTERN_CATEGORIES : [];
+      selects.forEach(select=>{
+        const current = String(select.value || "");
+        select.innerHTML = "";
+        if(list.length===0){
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "未添加分类";
+          select.appendChild(opt);
+          select.value = "";
+          return;
+        }
+        const optNone = document.createElement("option");
+        optNone.value = "";
+        optNone.textContent = "请选择";
+        select.appendChild(optNone);
+        list.forEach(cat=>{
+          const opt = document.createElement("option");
+          opt.value = String(cat.id);
+          opt.textContent = cat.name;
+          select.appendChild(opt);
+        });
+        if(current && list.some(c=>String(c.id)===current)){
+          select.value = current;
+        }else{
+          select.value = "";
+        }
+      });
+    }
+
+    function renderRecordsCategoryTabs(){
+      const bar = document.getElementById("recordsCategoryBar");
+      const listEl = document.getElementById("recordsCategoryList");
+      if(!bar || !listEl) return;
+      listEl.innerHTML = "";
+      const createBtn = (label, id)=>{
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "category-chip" + ((id===null && !ACTIVE_PATTERN_CATEGORY_ID) || (id && String(ACTIVE_PATTERN_CATEGORY_ID)===String(id)) ? " active" : "");
+        btn.textContent = label;
+        btn.dataset.id = id===null ? "" : String(id);
+        btn.addEventListener("click", ()=>{
+          const nextId = btn.dataset.id ? String(btn.dataset.id) : null;
+          if(String(ACTIVE_PATTERN_CATEGORY_ID||"") === String(nextId||"")) return;
+          ACTIVE_PATTERN_CATEGORY_ID = nextId;
+          renderRecordsCategoryTabs();
+          if(RECORDS_STATE.active === "consume"){
+            loadAndRenderRecordGroups();
+          }
+        });
+        return btn;
+      };
+      listEl.appendChild(createBtn("全部", null));
+      (PATTERN_CATEGORIES||[]).forEach(cat=>{
+        listEl.appendChild(createBtn(cat.name, cat.id));
+      });
+    }
+
+    async function loadPatternCategories(){
+      try{
+        const res = await apiGet("/api/patternCategories");
+        PATTERN_CATEGORIES = normalizeCategoryList(res?.data || []);
+      }catch{
+        PATTERN_CATEGORIES = [];
+      }
+      if(ACTIVE_PATTERN_CATEGORY_ID && !PATTERN_CATEGORIES.some(c=>String(c.id)===String(ACTIVE_PATTERN_CATEGORY_ID))){
+        ACTIVE_PATTERN_CATEGORY_ID = null;
+      }
+      renderPatternCategoryManager();
+      renderPatternCategorySelects();
+      renderRecordsCategoryTabs();
+      if(RECORDS_STATE && RECORDS_STATE.active === "consume"){
+        loadAndRenderRecordGroups();
+      }
+    }
+
     if(criticalInput) criticalInput.value = CRITICAL_THRESHOLD;
 
 	    if(addCodeSubmit && addCodeInput){
@@ -5751,6 +6099,40 @@ const criticalInput=document.getElementById("criticalInput");
 	        if(e.key==="Enter") _submitAddCode();
 	      });
 	    }
+
+    if(patternCategoryAdd && patternCategoryInput){
+      const _submitCategory = async ()=>{
+        const name = normalizeCategoryName(patternCategoryInput.value);
+        if(!name){ toast("请输入分类名称","error"); return; }
+        if((PATTERN_CATEGORIES||[]).length >= MAX_PATTERN_CATEGORIES){
+          toast(`最多只能创建${MAX_PATTERN_CATEGORIES}个分类`,"error");
+          return;
+        }
+        if(categoryDisplayLength(name) > 12){
+          toast("分类名称最多6个中文或12个英文","error");
+          return;
+        }
+        if(isCategoryNameDuplicate(name)){
+          toast("分类已存在","error");
+          return;
+        }
+        try{
+          patternCategoryAdd.disabled = true;
+          await apiPost("/api/patternCategories", {name});
+          patternCategoryInput.value = "";
+          await loadPatternCategories();
+          toast("已添加分类","success");
+        }catch(e){
+          toast(e?.message || "添加失败","error");
+        }finally{
+          patternCategoryAdd.disabled = false;
+        }
+      };
+      patternCategoryAdd.addEventListener("click", _submitCategory);
+      patternCategoryInput.addEventListener("keydown", (e)=>{
+        if(e.key==="Enter") _submitCategory();
+      });
+    }
 
     if(settingsPrimaryBtn) settingsPrimaryBtn.addEventListener("click",async()=>{
 
@@ -5855,6 +6237,8 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       // checkbox only for consume
       const toolbar = recordsOnlyWithPattern ? recordsOnlyWithPattern.closest(".records-toolbar") : null;
       if(toolbar) toolbar.style.display = type==="consume" ? "" : "none";
+      const categoryBar = document.getElementById("recordsCategoryBar");
+      if(categoryBar) categoryBar.style.display = type==="consume" ? "" : "none";
 
       if(type==="stats") loadAndRenderConsumeStats();
       else loadAndRenderRecordGroups();
@@ -5865,7 +6249,8 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       if(type==="stats") return;
       const only = !!(recordsOnlyWithPattern && recordsOnlyWithPattern.checked) && type==="consume";
       try{
-        const res = await apiGet(`/api/recordGroups?type=${encodeURIComponent(type)}${only ? "&onlyWithPattern=1" : ""}`);
+        const categoryParam = (type==="consume" && ACTIVE_PATTERN_CATEGORY_ID) ? `&patternCategoryId=${encodeURIComponent(ACTIVE_PATTERN_CATEGORY_ID)}` : "";
+        const res = await apiGet(`/api/recordGroups?type=${encodeURIComponent(type)}${only ? "&onlyWithPattern=1" : ""}${categoryParam}`);
         const groups = Array.isArray(res.data) ? res.data : [];
         renderRecordGroups(type, groups);
       }catch(e){
@@ -5960,14 +6345,23 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       listEl.innerHTML = "";
       if(!groups || groups.length===0){
         emptyEl.style.display="block";
+        if(type==="consume" && ACTIVE_PATTERN_CATEGORY_ID){
+          emptyEl.innerHTML = `<div class="empty-illus"></div><div class="empty-text">该分类暂无图纸记录</div>`;
+        }else{
+          emptyEl.textContent = "暂无记录";
+        }
         return;
       }
       emptyEl.style.display="none";
+      if(type==="consume" && ACTIVE_PATTERN_CATEGORY_ID){
+        emptyEl.innerHTML = "";
+      }
 
       for(const g of groups){
         const gid = String(g.gid ?? g.id ?? "");
         const ts = g.ts ?? g.created_at ?? g.createdAt ?? g.time ?? "";
         const pattern = String(g.pattern ?? "");
+        const patternCategoryId = g.patternCategoryId ?? g.pattern_category_id ?? null;
         const patternUrlRaw = g.patternUrl ?? g.pattern_url;
         const patternUrl = (patternUrlRaw === null || patternUrlRaw === undefined) ? "" : String(patternUrlRaw).trim();
         const patternClean = (pattern==="手动调整") ? "" : pattern;
@@ -5987,7 +6381,7 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
         btnEdit.type="button";
         btnEdit.className="link-action";
         btnEdit.textContent="编辑";
-        btnEdit.addEventListener("click", ()=>openRecordEdit(type, gid, pattern, patternUrl));
+        btnEdit.addEventListener("click", ()=>openRecordEdit(type, gid, pattern, patternUrl, patternCategoryId));
 
         const btnToggle = document.createElement("button");
         btnToggle.type="button";
@@ -6248,9 +6642,9 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
       updateRecordEditImageUI();
     }
 
-    async function openRecordEdit(type, gid, pattern, patternUrl){
+    async function openRecordEdit(type, gid, pattern, patternUrl, patternCategoryId){
       if(!recordEditDialog) return;
-      RECORDS_STATE.pendingEdit = {type, gid};
+      RECORDS_STATE.pendingEdit = {type, gid, categoryId: (patternCategoryId === null || patternCategoryId === undefined) ? null : String(patternCategoryId)};
       if(recordEditTitle) recordEditTitle.textContent = type==="consume" ? "编辑消耗记录" : "编辑补充记录";
       if(recordEditPatternField) recordEditPatternField.style.display = type==="consume" ? "" : "none";
       if(recordEditImageField) recordEditImageField.style.display = type==="consume" ? "" : "none";
@@ -6310,6 +6704,9 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
           const pattern = (recordEditPatternInput?.value || "").trim();
           if(pattern.length>20){ toast("图纸名称不超过 20 字","error"); return; }
           payload.pattern = pattern || null;
+          if(p.categoryId !== undefined){
+            payload.patternCategoryId = p.categoryId || null;
+          }
           if(RECORD_EDIT_IMAGE.changed){
             if(RECORD_EDIT_IMAGE.removed){
               payload.patternUrl = null;
@@ -6556,6 +6953,7 @@ if(btnLogout) btnLogout.addEventListener("click", async ()=>{
   await initGuestDefaults();
   await loadSettings();
   await syncAll();
+  await loadPatternCategories();
   maybeShowGuestTip();
   toast("已退出，数据将保存在本地浏览器","info");
 });
@@ -6582,6 +6980,7 @@ if(btnLogout) btnLogout.addEventListener("click", async ()=>{
               closeDialog(loginDialog);
               await loadSettings();
               await syncAll();
+              await loadPatternCategories();
               toast("登录成功","success");
             }else{
               toast(r.message || "登录失败","error");
@@ -6617,6 +7016,7 @@ if(btnLogout) btnLogout.addEventListener("click", async ()=>{
               closeDialog(registerDialog);
               await loadSettings();
               await syncAll();
+              await loadPatternCategories();
               toast("注册成功","success");
             }else{
               toast(r.message || "注册失败","error");
@@ -6656,6 +7056,7 @@ if(btnLogout) btnLogout.addEventListener("click", async ()=>{
       try{
         await loadSettings();
         await syncAll();
+        await loadPatternCategories();
       }catch(e){
         console.error(e);
         if(!IS_LOGGED_IN){
@@ -6663,6 +7064,7 @@ if(btnLogout) btnLogout.addEventListener("click", async ()=>{
           toast("已进入本地模式（未登录）","info");
           await initGuestDefaults();
           await syncAll();
+          await loadPatternCategories();
         }else{
           toast("无法连接云端 API，请检查服务是否运行","error");
         }
