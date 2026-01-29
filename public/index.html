@@ -3813,11 +3813,8 @@ function formatTimeSecondParts(iso){
       const ext = inferImageExt(file);
       return OSS_ALLOWED_EXT.has(ext);
     }
-    function getTargetImageType(file){
-      const mime = String(file?.type || "").toLowerCase();
-      if(mime === "image/webp") return "image/webp";
-      if(mime === "image/png") return "image/png";
-      return "image/jpeg";
+    function getTargetImageType(){
+      return "image/webp";
     }
     function newUploadUuid(){
       try{
@@ -3867,10 +3864,12 @@ function formatTimeSecondParts(iso){
         ctx.drawImage(img, 0, 0, targetW, targetH);
       }
       const targetType = getTargetImageType(file);
-      const quality = (targetType === "image/jpeg" || targetType === "image/webp") ? 0.5 : undefined;
+      const quality = 0.5;
       const blob = await new Promise(resolve=>canvas.toBlob(resolve, targetType, quality));
-      if(!blob){
-        return { blob: file, ext: inferImageExt(file), mime: file.type || targetType };
+      const fallbackExt = inferImageExt(file);
+      const fallbackMime = file.type || (fallbackExt === "png" ? "image/png" : (fallbackExt === "webp" ? "image/webp" : "image/jpeg"));
+      if(!blob || (Number.isFinite(file.size) && file.size > 0 && blob.size > file.size)){
+        return { blob: file, ext: fallbackExt, mime: fallbackMime };
       }
       const ext = targetType === "image/webp" ? "webp" : (targetType === "image/png" ? "png" : "jpg");
       return { blob, ext, mime: targetType };
