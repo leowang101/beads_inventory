@@ -1011,6 +1011,43 @@ app.post("/api/patternCategoryDelete", requireAuth, async (req, res) => {
   }
 });
 
+app.post("/api/patternCategoryUpdate", requireAuth, async (req, res) => {
+  try{
+    const id = parseCategoryId(req.body?.id);
+    const name = normCategoryName(req.body?.name);
+    if(!id) return sendJson(res, 400, { ok:false, message:"invalid id" });
+    if(!name) return sendJson(res, 400, { ok:false, message:"请输入分类名称" });
+    if(categoryDisplayLength(name) > 12){
+      return sendJson(res, 400, { ok:false, message:"分类名称最多6个中文或12个英文" });
+    }
+
+    const [[base]] = await safeQuery(
+      "SELECT id, name FROM user_pattern_categories WHERE user_id=? AND id=? LIMIT 1",
+      [req.user.id, id]
+    );
+    if(!base) return sendJson(res, 404, { ok:false, message:"分类不存在" });
+    if(String(base.name || "") === name){
+      return sendJson(res, 200, { ok:true });
+    }
+
+    const [exists] = await safeQuery(
+      "SELECT id FROM user_pattern_categories WHERE user_id=? AND name=? AND id<>? LIMIT 1",
+      [req.user.id, name, id]
+    );
+    if(exists && exists.length > 0){
+      return sendJson(res, 400, { ok:false, message:"分类已存在" });
+    }
+
+    await safeQuery(
+      "UPDATE user_pattern_categories SET name=? WHERE user_id=? AND id=?",
+      [name, req.user.id, id]
+    );
+    sendJson(res, 200, { ok:true });
+  }catch(e){
+    sendJson(res, 500, { ok:false, message: e.message });
+  }
+});
+
 app.post("/api/adjust", requireAuth, async (req, res) => {
   try {
     const code = String(req.body?.code || "").toUpperCase();

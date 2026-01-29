@@ -1229,6 +1229,11 @@ main{
       overflow:hidden;
       text-overflow:ellipsis;
     }
+    .category-actions{
+      display:flex;
+      gap:8px;
+      flex:0 0 auto;
+    }
     .series-row button,
     .category-row button{
       padding:6px 12px;
@@ -3846,6 +3851,23 @@ function formatTimeSecondParts(iso){
           return {ok:true};
         }
 
+        if(path==="/api/patternCategoryUpdate"){
+          const id = data?.id;
+          const name = normalizeCategoryName(data?.name);
+          if(!id) throw new Error("invalid id");
+          if(!name) throw new Error("请输入分类名称");
+          if(categoryDisplayLength(name) > 12) throw new Error("分类名称最多6个中文或12个英文");
+          if(isCategoryNameDuplicate(name, id)) throw new Error("分类已存在");
+          PATTERN_CATEGORIES = (PATTERN_CATEGORIES||[]).map(c=>{
+            if(String(c?.id||"") === String(id)){
+              return {...c, name};
+            }
+            return c;
+          });
+          saveGuest();
+          return {ok:true};
+        }
+
         if(path==="/api/recordGroupDelete"){
           const gid = String(data?.gid||"");
           const type = String(data?.type||"").toLowerCase();
@@ -6019,6 +6041,29 @@ const criticalInput=document.getElementById("criticalInput");
         name.className = "category-name";
         name.textContent = cat.name;
 
+        const actions = document.createElement("div");
+        actions.className = "category-actions";
+
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.className = "btn-secondary";
+        edit.textContent = "编辑";
+        edit.addEventListener("click", async()=>{
+          const next = prompt("编辑分类名称", cat.name);
+          if(next === null) return;
+          const val = normalizeCategoryName(next);
+          if(!val){ toast("请输入分类名称","error"); return; }
+          if(categoryDisplayLength(val) > 12){ toast("分类名称最多6个中文或12个英文","error"); return; }
+          if(isCategoryNameDuplicate(val, cat.id)){ toast("分类已存在","error"); return; }
+          try{
+            await apiPost("/api/patternCategoryUpdate", {id: cat.id, name: val});
+            await loadPatternCategories();
+            toast("已更新分类","success");
+          }catch(e){
+            toast(e?.message || "更新失败","error");
+          }
+        });
+
         const del = document.createElement("button");
         del.type = "button";
         del.className = "btn-danger";
@@ -6039,7 +6084,9 @@ const criticalInput=document.getElementById("criticalInput");
         });
 
         row.appendChild(name);
-        row.appendChild(del);
+        actions.appendChild(edit);
+        actions.appendChild(del);
+        row.appendChild(actions);
         patternCategoryList.appendChild(row);
       });
     }
@@ -6058,14 +6105,14 @@ const criticalInput=document.getElementById("criticalInput");
         if(list.length===0){
           const opt = document.createElement("option");
           opt.value = "";
-          opt.textContent = "未添加分类";
+          opt.textContent = "请在我的页面添加分类";
           select.appendChild(opt);
           select.value = "";
           return;
         }
         const optNone = document.createElement("option");
         optNone.value = "";
-        optNone.textContent = "请选择";
+        optNone.textContent = "不设置";
         select.appendChild(optNone);
         list.forEach(cat=>{
           const opt = document.createElement("option");
