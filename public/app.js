@@ -3261,10 +3261,6 @@ const criticalInput=document.getElementById("criticalInput");
         toast("保存失败","error");
       }
     });
-
-
-
-    // 拼豆记录
     const recordsDialog = document.getElementById("recordsDialog");
     const recordDeleteDialog = document.getElementById("recordDeleteDialog");
     const recordDeleteTitle = document.getElementById("recordDeleteTitle");

@@ -25,3 +25,8 @@
 
 - `.env`：本地/生产环境配置（含敏感信息，已被 gitignore）
 - `node_modules/`：本地依赖产物（已被 gitignore）
+
+## 执行结果（Step 3）
+
+- 本次未发现 A 类项，未执行删除
+- 注释整理：移除 `public/app.js` 中重复的分区注释（不影响行为）
