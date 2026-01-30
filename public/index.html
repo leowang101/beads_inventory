@@ -4757,6 +4757,32 @@ function formatTimeSecondParts(iso){
           status: headRes?.res?.status || headRes?.status || "",
           requestId: headRes?.res?.headers?.["x-oss-request-id"] || ""
         });
+        try{
+          const listPrefix = objectKey.slice(0, objectKey.lastIndexOf("/") + 1);
+          const listRes = await oss.client.list({ prefix: listPrefix, "max-keys": 5 });
+          console.info("[OSS] list verify", {
+            prefix: listPrefix,
+            objects: (listRes?.objects || []).map(item => item?.name).filter(Boolean)
+          });
+        }catch(listErr){
+          console.error("[OSS] list verify failed", {
+            message: listErr?.message || String(listErr),
+            code: listErr?.code || "",
+            status: listErr?.status || listErr?.res?.status || "",
+            requestId: listErr?.requestId || listErr?.res?.headers?.["x-oss-request-id"] || ""
+          });
+        }
+        try{
+          const signedUrl = oss.client.signatureUrl(objectKey, { expires: 3600 });
+          console.info("[OSS] signed url", { objectKey, signedUrl, expires: 3600 });
+        }catch(signErr){
+          console.error("[OSS] signed url failed", {
+            message: signErr?.message || String(signErr),
+            code: signErr?.code || "",
+            status: signErr?.status || signErr?.res?.status || "",
+            requestId: signErr?.requestId || signErr?.res?.headers?.["x-oss-request-id"] || ""
+          });
+        }
       }catch(err){
         console.error("[OSS] upload verify failed", {
           objectKey,
