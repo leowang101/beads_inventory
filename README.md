@@ -104,37 +104,7 @@ pm2 restart beads
 
 ---
 
-## 数据库迁移 / 索引变更
 
-本项目**不自动执行**迁移或索引变更。若需要修改，请将 SQL 放入 `migrations/`，并手动执行。
-
-示例执行：
-
-```bash
-mysql -u <user> -p -h <host> <db_name> < migrations/xxx.sql
-```
-
-回滚方式：
-
-```sql
--- 示例
-DROP INDEX idx_name ON table_name;
-```
-
----
-
-## 冒烟测试
-
-```bash
-./scripts/smoke.sh
-```
-
-可选环境变量：
-- `BASE_URL`（默认 http://127.0.0.1:3000）
-- `SMOKE_USERNAME` / `SMOKE_PASSWORD`
-- `SMOKE_REGISTER=1`（登录失败时自动注册）
-
----
 
 ## 常见问题排查
 

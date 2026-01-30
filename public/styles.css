@@ -2680,6 +2680,10 @@ body.theme-light #recordsDialog .stats-card{
       margin:0;
       text-align:right;
     }
+    .me-footer-note{
+      margin-top:8px;
+      text-align:center;
+    }
     .me-actions{
       display:flex;
       gap:10px;
