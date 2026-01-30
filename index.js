@@ -41,9 +41,9 @@ const QWEN_VL_MODEL = process.env.QWEN_VL_MODEL || "qwen-vl-plus";
 // ====== OSS (STS via ECS RAM Role) ======
 const OSS_REGION = process.env.OSS_REGION || "oss-cn-beijing";
 const OSS_BUCKET = process.env.OSS_BUCKET || "beads-patterns";
-const OSS_UPLOAD_ENDPOINT = process.env.OSS_UPLOAD_ENDPOINT || process.env.OSS_UPLOAD_DOMAIN || "https://upload.leobeads.xyz";
-const OSS_UPLOAD_CNAME = String(process.env.OSS_UPLOAD_CNAME || "true").toLowerCase() !== "false";
-const OSS_CDN_BASE_URL = process.env.OSS_CDN_BASE_URL || process.env.OSS_CDN_DOMAIN || "https://img.leobeads.xyz";
+const OSS_UPLOAD_ENDPOINT = process.env.OSS_UPLOAD_ENDPOINT || process.env.OSS_UPLOAD_DOMAIN || "https://oss-cn-beijing.aliyuncs.com";
+const OSS_UPLOAD_CNAME = String(process.env.OSS_UPLOAD_CNAME || "false").toLowerCase() !== "false";
+const OSS_CDN_BASE_URL = process.env.OSS_CDN_BASE_URL || process.env.OSS_CDN_DOMAIN || "https://beads-patterns.oss-cn-beijing.aliyuncs.com";
 const ECS_RAM_ROLE_NAME = process.env.ECS_RAM_ROLE_NAME || process.env.OSS_ROLE_NAME || "EcsOssRole";
 const ECS_METADATA_BASE_URL = process.env.ECS_METADATA_BASE_URL || "http://100.100.100.200/latest/meta-data/ram/security-credentials";
 const OSS_UPLOAD_PREFIX = process.env.OSS_UPLOAD_PREFIX || "patterns";
