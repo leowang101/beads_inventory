@@ -4749,7 +4749,18 @@ function formatTimeSecondParts(iso){
       const objectKey = buildObjectKey(oss.uploadPrefix, prepared.ext);
       const mime = prepared.mime || file.type || "image/jpeg";
       console.info("[OSS] upload prepared", {objectKey, ext: prepared.ext, mime, size: prepared.blob?.size || file.size});
-      const result = await oss.client.multipartUpload(objectKey, prepared.blob, { mime });
+      const preparedSize = Number(prepared.blob?.size || file.size || 0);
+      const usePut = preparedSize > 0 && preparedSize <= 4 * 1024 * 1024;
+      console.info("[OSS] upload method", {method: usePut ? "put" : "multipart", size: preparedSize});
+      const result = usePut
+        ? await oss.client.put(objectKey, prepared.blob, { mime })
+        : await oss.client.multipartUpload(objectKey, prepared.blob, { mime });
+      console.info("[OSS] upload response", {
+        objectKey,
+        status: result?.res?.status || "",
+        requestId: result?.res?.headers?.["x-oss-request-id"] || "",
+        etag: result?.etag || result?.res?.headers?.etag || ""
+      });
       try{
         const headRes = await oss.client.head(objectKey);
         console.info("[OSS] upload verify ok", {
