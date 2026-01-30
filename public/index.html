@@ -3433,7 +3433,6 @@ body.theme-light #todoDialog .records-consume .record-thumb::after{
 
   <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/ali-oss@6.20.0/dist/aliyun-oss-sdk.min.js"></script>
   <script>
 const API_BASE = window.location.origin;
 
@@ -4530,6 +4529,68 @@ function formatTimeSecondParts(iso){
       return res.json();
     }
 
+    // ----- OSS SDK lazy loader -----
+    const OSS_SDK_URL = "https://cdn.jsdelivr.net/npm/ali-oss@6.20.0/dist/aliyun-oss-sdk.min.js";
+    const OSS_SDK_TIMEOUT_MS = 10000;
+    let OSS_SDK_PROMISE = null;
+    let OSS_SDK_TOAST_SHOWN = false;
+
+    function _loadOssSdkOnce(){
+      return new Promise((resolve, reject)=>{
+        if(window.OSS) return resolve();
+        const script = document.createElement("script");
+        let done = false;
+        const cleanup = (err)=>{
+          if(done) return;
+          done = true;
+          if(timer) clearTimeout(timer);
+          script.onload = null;
+          script.onerror = null;
+          if(err){
+            try{ script.remove(); }catch{}
+            reject(err);
+          }else{
+            resolve();
+          }
+        };
+        const timer = setTimeout(()=>{
+          cleanup(new Error(`oss sdk load timeout ${OSS_SDK_TIMEOUT_MS}ms`));
+        }, OSS_SDK_TIMEOUT_MS);
+        script.async = true;
+        script.src = OSS_SDK_URL;
+        script.onload = ()=>{
+          if(window.OSS){
+            cleanup();
+          }else{
+            cleanup(new Error("oss sdk loaded but window.OSS missing"));
+          }
+        };
+        script.onerror = ()=>{
+          cleanup(new Error("oss sdk load error"));
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    function loadOssSdk(){
+      if(window.OSS) return Promise.resolve();
+      if(OSS_SDK_PROMISE) return OSS_SDK_PROMISE;
+      OSS_SDK_PROMISE = _loadOssSdkOnce().catch(err=>{
+        OSS_SDK_PROMISE = null;
+        throw err;
+      });
+      return OSS_SDK_PROMISE;
+    }
+
+    function warmupOssSdk(){
+      const runner = () => loadOssSdk().catch((err)=>console.warn("[OSS SDK] warmup failed", err));
+      if(typeof requestIdleCallback === "function"){
+        requestIdleCallback(runner);
+      }else{
+        setTimeout(runner, 300);
+      }
+    }
+
     // ----- OSS upload helpers (STS) -----
     const OSS_STATE = {
       client: null,
@@ -4634,7 +4695,22 @@ function formatTimeSecondParts(iso){
     }
     async function ensureOssClient(){
       if(!IS_LOGGED_IN) throw new Error("请登录后上传图纸");
-      if(!window.OSS) throw new Error("OSS SDK 未加载");
+      if(!window.OSS){
+        if(!OSS_SDK_TOAST_SHOWN){
+          OSS_SDK_TOAST_SHOWN = true;
+          toast("上传组件加载中，请稍候...","info");
+        }
+        try{
+          await loadOssSdk();
+        }catch(e){
+          OSS_SDK_TOAST_SHOWN = false;
+          throw new Error("上传组件加载失败，请检查网络后重试");
+        }
+      }
+      OSS_SDK_TOAST_SHOWN = false;
+      if(!window.OSS){
+        throw new Error("上传组件加载失败，请检查网络后重试");
+      }
       const now = Date.now();
       if(OSS_STATE.client && OSS_STATE.expiration - now > 60 * 1000){
         return OSS_STATE;
@@ -8052,6 +8128,7 @@ if(btnLogout) btnLogout.addEventListener("click", async ()=>{
       }
 
       maybeShowGuestTip();
+      warmupOssSdk();
     }
 
     (async function init(){
