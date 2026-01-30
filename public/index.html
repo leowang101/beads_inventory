@@ -4588,7 +4588,7 @@ function formatTimeSecondParts(iso){
       client: null,
       expiration: 0,
       uploadPrefix: "",
-      cdnBaseUrl: "https://img.leobeads.xyz"
+      cdnBaseUrl: "https://beads-patterns.oss-cn-beijing.aliyuncs.com"
     };
     const OSS_ALLOWED_TYPES = new Set(["image/jpeg","image/png","image/webp"]);
     const OSS_ALLOWED_EXT = new Set(["jpg","jpeg","png","webp"]);
@@ -4596,6 +4596,12 @@ function formatTimeSecondParts(iso){
     function normalizeUploadPrefix(prefix){
       const base = String(prefix || "").replace(/^\/+|\/+$/g, "");
       return base ? `${base}/` : "";
+    }
+    function normalizeHttpsUrl(base, fallback){
+      const value = String(base || "").trim();
+      if(!value) return String(fallback || "");
+      if(/^https?:\/\//i.test(value)) return value;
+      return `https://${value}`;
     }
     function inferImageExt(file){
       const name = String(file?.name || "");
@@ -4731,7 +4737,7 @@ function formatTimeSecondParts(iso){
       });
       OSS_STATE.expiration = Date.parse(data.expiration || "") || 0;
       OSS_STATE.uploadPrefix = String(data.uploadPrefix || "");
-      OSS_STATE.cdnBaseUrl = String(data.cdnBaseUrl || OSS_STATE.cdnBaseUrl);
+      OSS_STATE.cdnBaseUrl = normalizeHttpsUrl(data.cdnBaseUrl, OSS_STATE.cdnBaseUrl);
       return OSS_STATE;
     }
     async function uploadPatternImage(file){
@@ -4744,7 +4750,23 @@ function formatTimeSecondParts(iso){
       const mime = prepared.mime || file.type || "image/jpeg";
       console.info("[OSS] upload prepared", {objectKey, ext: prepared.ext, mime, size: prepared.blob?.size || file.size});
       const result = await oss.client.multipartUpload(objectKey, prepared.blob, { mime });
-      const base = String(oss.cdnBaseUrl || "https://img.leobeads.xyz").replace(/\/+$/g, "");
+      try{
+        const headRes = await oss.client.head(objectKey);
+        console.info("[OSS] upload verify ok", {
+          objectKey,
+          status: headRes?.res?.status || headRes?.status || "",
+          requestId: headRes?.res?.headers?.["x-oss-request-id"] || ""
+        });
+      }catch(err){
+        console.error("[OSS] upload verify failed", {
+          objectKey,
+          message: err?.message || String(err),
+          code: err?.code || "",
+          status: err?.status || err?.res?.status || "",
+          requestId: err?.requestId || err?.res?.headers?.["x-oss-request-id"] || ""
+        });
+      }
+      const base = normalizeHttpsUrl(oss.cdnBaseUrl, "https://beads-patterns.oss-cn-beijing.aliyuncs.com").replace(/\/+$/g, "");
       const cdnUrl = `${base}/${objectKey}`;
       console.info("[OSS] upload done", {objectKey, cdnUrl, etag: result?.etag || ""});
       return {

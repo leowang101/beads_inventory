@@ -10,8 +10,16 @@
 
 "use strict";
 
+function normalizeHttpsUrl(input, fallback){
+  const value = String(input || "").trim();
+  if(!value) return fallback || "";
+  if(/^https?:\/\//i.test(value)) return value;
+  return `https://${value}`;
+}
+
+const path = require("path");
 try {
-  require("dotenv").config({ path: require("path").join(__dirname, ".env") });
+  require("dotenv").config({ path: path.join(__dirname, ".env"), override: true });
 } catch (e) {
   // dotenv is optional; if not installed, ensure your process manager injects env vars.
 }
@@ -20,7 +28,6 @@ const express = require("express");
 const crypto = require("crypto");
 const multer = require("multer");
 const mysql = require("mysql2/promise");
-const path = require("path");
 
 const BUILD_TAG = "beads-multi-2025-12-15";
 const MAX_PATTERN_CATEGORIES = 10;
@@ -43,7 +50,10 @@ const OSS_REGION = process.env.OSS_REGION || "oss-cn-beijing";
 const OSS_BUCKET = process.env.OSS_BUCKET || "beads-patterns";
 const OSS_UPLOAD_ENDPOINT = process.env.OSS_UPLOAD_ENDPOINT || process.env.OSS_UPLOAD_DOMAIN || "https://oss-cn-beijing.aliyuncs.com";
 const OSS_UPLOAD_CNAME = String(process.env.OSS_UPLOAD_CNAME || "false").toLowerCase() !== "false";
-const OSS_CDN_BASE_URL = process.env.OSS_CDN_BASE_URL || process.env.OSS_CDN_DOMAIN || "https://beads-patterns.oss-cn-beijing.aliyuncs.com";
+const OSS_CDN_BASE_URL = normalizeHttpsUrl(
+  process.env.OSS_CDN_BASE_URL || process.env.OSS_CDN_DOMAIN || "https://beads-patterns.oss-cn-beijing.aliyuncs.com",
+  "https://beads-patterns.oss-cn-beijing.aliyuncs.com"
+);
 const ECS_RAM_ROLE_NAME = process.env.ECS_RAM_ROLE_NAME || process.env.OSS_ROLE_NAME || "EcsOssRole";
 const ECS_METADATA_BASE_URL = process.env.ECS_METADATA_BASE_URL || "http://100.100.100.200/latest/meta-data/ram/security-credentials";
 const OSS_UPLOAD_PREFIX = process.env.OSS_UPLOAD_PREFIX || "patterns";
