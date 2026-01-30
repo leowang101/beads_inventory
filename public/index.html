@@ -4521,6 +4521,7 @@ function formatTimeSecondParts(iso){
         if(window.OSS) return resolve();
         const script = document.createElement("script");
         let done = false;
+        console.info("[OSS SDK] loading", url);
         const cleanup = (err)=>{
           if(done) return;
           done = true;
@@ -4541,6 +4542,7 @@ function formatTimeSecondParts(iso){
         script.src = url;
         script.onload = ()=>{
           if(window.OSS){
+            console.info("[OSS SDK] loaded", url);
             cleanup();
           }else{
             cleanup(new Error("oss sdk loaded but window.OSS missing"));
@@ -4676,11 +4678,22 @@ function formatTimeSecondParts(iso){
       return { blob, ext, mime: targetType };
     }
     async function fetchOssSts(){
+      console.info("[OSS] fetch STS: start");
       const res = await apiGet("/api/oss/sts");
       const data = res?.data || res;
       if(!data || !data.accessKeyId || !data.accessKeySecret || !data.securityToken){
+        console.warn("[OSS] fetch STS: invalid response", data);
         throw new Error("OSS 凭证获取失败");
       }
+      console.info("[OSS] fetch STS: ok", {
+        region: data.region,
+        bucket: data.bucket,
+        endpoint: data.endpoint,
+        cname: data.cname,
+        uploadPrefix: data.uploadPrefix,
+        cdnBaseUrl: data.cdnBaseUrl,
+        expiration: data.expiration
+      });
       return data;
     }
     async function ensureOssClient(){
@@ -4697,6 +4710,15 @@ function formatTimeSecondParts(iso){
         return OSS_STATE;
       }
       const data = await fetchOssSts();
+      console.info("[OSS] init client", {
+        region: data.region,
+        bucket: data.bucket,
+        endpoint: data.endpoint,
+        cname: data.cname,
+        uploadPrefix: data.uploadPrefix,
+        cdnBaseUrl: data.cdnBaseUrl,
+        expiration: data.expiration
+      });
       OSS_STATE.client = new window.OSS({
         region: data.region,
         bucket: data.bucket,
@@ -4715,13 +4737,16 @@ function formatTimeSecondParts(iso){
     async function uploadPatternImage(file){
       if(!file) return null;
       if(!isAllowedImageFile(file)) throw new Error("仅支持 JPG/PNG/WebP 图片");
+      console.info("[OSS] upload start", {name: file.name, type: file.type, size: file.size});
       const oss = await ensureOssClient();
       const prepared = await compressImageFile(file);
       const objectKey = buildObjectKey(oss.uploadPrefix, prepared.ext);
       const mime = prepared.mime || file.type || "image/jpeg";
+      console.info("[OSS] upload prepared", {objectKey, ext: prepared.ext, mime, size: prepared.blob?.size || file.size});
       const result = await oss.client.multipartUpload(objectKey, prepared.blob, { mime });
       const base = String(oss.cdnBaseUrl || "https://img.leobeads.xyz").replace(/\/+$/g, "");
       const cdnUrl = `${base}/${objectKey}`;
+      console.info("[OSS] upload done", {objectKey, cdnUrl, etag: result?.etag || ""});
       return {
         objectKey,
         cdnUrl,

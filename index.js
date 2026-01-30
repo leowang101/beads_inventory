@@ -787,6 +787,14 @@ app.get("/api/oss/sts", requireAuth, async (req, res) => {
   try {
     const sts = await getOssSts();
     const uploadPrefix = buildUploadPrefix(req.user?.id);
+    console.info("[OSS] sts ok", {
+      userId: req.user?.id,
+      bucket: OSS_BUCKET,
+      endpoint: OSS_UPLOAD_ENDPOINT,
+      cname: OSS_UPLOAD_CNAME,
+      uploadPrefix,
+      cdnBaseUrl: OSS_CDN_BASE_URL,
+    });
     sendJson(res, 200, {
       ok: true,
       data: {
@@ -804,6 +812,7 @@ app.get("/api/oss/sts", requireAuth, async (req, res) => {
       },
     });
   } catch (e) {
+    console.error("[OSS] sts failed", { userId: req.user?.id, message: e.message });
     sendJson(res, 502, { ok: false, message: e.message });
   }
 });
