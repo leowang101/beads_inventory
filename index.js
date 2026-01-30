@@ -388,6 +388,21 @@ function parseCategoryId(v){
   return n;
 }
 
+function normalizeTodoItems(rawItems){
+  const list = Array.isArray(rawItems) ? rawItems : [];
+  const map = new Map();
+  for(const it of list){
+    const code = String(it?.code || "").trim().toUpperCase();
+    const qty = Number(it?.qty);
+    if(!code) continue;
+    if(!Number.isInteger(qty) || qty <= 0) continue;
+    const curr = map.get(code);
+    if(curr) curr.qty += qty;
+    else map.set(code, {code, qty});
+  }
+  return Array.from(map.values());
+}
+
 function isValidUsername(username) {
   return /^[A-Za-z0-9_\-\u4e00-\u9fa5]{3,32}$/.test(String(username || ""));
 }
@@ -562,6 +577,24 @@ async function ensureSchema() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_user_code_time(user_id, code, created_at),
       CONSTRAINT fk_history_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_todo_patterns (
+      id BIGINT PRIMARY KEY AUTO_INCREMENT,
+      user_id BIGINT NOT NULL,
+      pattern VARCHAR(64) NULL,
+      pattern_url VARCHAR(512) NOT NULL,
+      pattern_key VARCHAR(512) NULL,
+      pattern_category_id BIGINT NULL,
+      items_json MEDIUMTEXT NOT NULL,
+      total_qty INT NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_todo_user_time(user_id, created_at),
+      INDEX idx_todo_user_category(user_id, pattern_category_id),
+      CONSTRAINT fk_todo_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+      CONSTRAINT fk_todo_pattern_category FOREIGN KEY(pattern_category_id) REFERENCES user_pattern_categories(id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
 
@@ -996,6 +1029,7 @@ app.post("/api/patternCategoryDelete", requireAuth, async (req, res) => {
 
     await withTransaction(async(conn)=>{
       await q(conn, "UPDATE user_history SET pattern_category_id=NULL WHERE user_id=? AND pattern_category_id=?", [req.user.id, id]);
+      await q(conn, "UPDATE user_todo_patterns SET pattern_category_id=NULL WHERE user_id=? AND pattern_category_id=?", [req.user.id, id]);
       const [delRes] = await q(conn, "DELETE FROM user_pattern_categories WHERE user_id=? AND id=?", [req.user.id, id]);
       if(!delRes || delRes.affectedRows === 0){
         throw new Error("not found");
@@ -1045,6 +1079,310 @@ app.post("/api/patternCategoryUpdate", requireAuth, async (req, res) => {
     sendJson(res, 200, { ok:true });
   }catch(e){
     sendJson(res, 500, { ok:false, message: e.message });
+  }
+});
+
+// ====== 待拼图纸 ======
+app.post("/api/todoPatternAdd", requireAuth, async (req, res) => {
+  try {
+    const pattern = req.body?.pattern ? String(req.body.pattern).slice(0, 64) : null;
+    const patternUrl = normPatternUrl(req.body?.patternUrl);
+    const patternKey = normPatternKey(req.body?.patternKey);
+    const patternCategoryRaw = req.body?.patternCategoryId;
+    const items = normalizeTodoItems(req.body?.items || []);
+
+    if (!patternUrl) return sendJson(res, 400, { ok: false, message: "missing patternUrl" });
+    if (items.length === 0) return sendJson(res, 400, { ok: false, message: "empty items" });
+    if (items.length > 500) return sendJson(res, 400, { ok: false, message: "too many items" });
+
+    let patternCategoryId = null;
+    if (patternCategoryRaw !== undefined && patternCategoryRaw !== null && patternCategoryRaw !== "") {
+      const cid = parseCategoryId(patternCategoryRaw);
+      if (!cid) return sendJson(res, 400, { ok: false, message: "invalid category" });
+      const [rows] = await safeQuery(
+        "SELECT id FROM user_pattern_categories WHERE user_id=? AND id=? LIMIT 1",
+        [req.user.id, cid]
+      );
+      if (!rows || rows.length === 0) return sendJson(res, 400, { ok: false, message: "分类不存在" });
+      patternCategoryId = cid;
+    }
+
+    const codes = items.map(it => it.code);
+    {
+      const inPh = codes.map(() => "?").join(",");
+      const [pRows] = await safeQuery(
+        `SELECT code FROM palette WHERE code IN (${inPh})`,
+        codes
+      );
+      const pSet = new Set((pRows || []).map(r => String(r.code).toUpperCase()));
+      for (const c of codes) {
+        if (!pSet.has(c)) return sendJson(res, 400, { ok: false, message: `unknown code: ${c}` });
+      }
+      const [rmRows] = await safeQuery(
+        `SELECT code FROM user_removed_codes WHERE user_id=? AND code IN (${inPh})`,
+        [req.user.id, ...codes]
+      );
+      if (rmRows && rmRows.length > 0) {
+        return sendJson(res, 400, { ok: false, message: "包含已删除的色号，请先在设置中重新添加色号" });
+      }
+    }
+
+    const totalQty = items.reduce((acc, it) => acc + (Number(it.qty) || 0), 0);
+    const itemsJson = JSON.stringify(items);
+    const [result] = await safeQuery(
+      "INSERT INTO user_todo_patterns(user_id, pattern, pattern_url, pattern_key, pattern_category_id, items_json, total_qty) VALUES(?,?,?,?,?,?,?)",
+      [req.user.id, pattern, patternUrl, patternKey, patternCategoryId, itemsJson, totalQty]
+    );
+    sendJson(res, 200, { ok: true, id: result?.insertId || null });
+  } catch (e) {
+    sendJson(res, 500, { ok: false, message: e.message });
+  }
+});
+
+app.get("/api/todoPatterns", requireAuth, async (req, res) => {
+  try {
+    const rawCategory = req.query?.patternCategoryId;
+    const categoryId = parseCategoryId(rawCategory);
+    if (rawCategory !== undefined && rawCategory !== null && rawCategory !== "" && !categoryId) {
+      return sendJson(res, 400, { ok: false, message: "invalid category" });
+    }
+    const categoryClause = categoryId ? " AND pattern_category_id=? " : "";
+    const params = categoryId ? [req.user.id, categoryId] : [req.user.id];
+    const [rows] = await safeQuery(
+      `
+      SELECT id,
+             UNIX_TIMESTAMP(created_at)*1000 AS ts,
+             pattern,
+             pattern_url AS patternUrl,
+             pattern_key AS patternKey,
+             pattern_category_id AS patternCategoryId,
+             total_qty AS total
+        FROM user_todo_patterns
+       WHERE user_id=? ${categoryClause}
+       ORDER BY created_at DESC, id DESC
+      `,
+      params
+    );
+    sendJson(res, 200, { ok: true, data: rows || [] });
+  } catch (e) {
+    sendJson(res, 500, { ok: false, message: e.message });
+  }
+});
+
+app.get("/api/todoPatternDetail", requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.query?.id);
+    if (!Number.isInteger(id) || id <= 0) return sendJson(res, 400, { ok: false, message: "invalid id" });
+    const [rows] = await safeQuery(
+      "SELECT items_json AS itemsJson FROM user_todo_patterns WHERE user_id=? AND id=? LIMIT 1",
+      [req.user.id, id]
+    );
+    if (!rows || rows.length === 0) return sendJson(res, 404, { ok: false, message: "not found" });
+    let items = [];
+    try { items = JSON.parse(rows[0].itemsJson || "[]") || []; } catch {}
+    sendJson(res, 200, { ok: true, data: items });
+  } catch (e) {
+    sendJson(res, 500, { ok: false, message: e.message });
+  }
+});
+
+app.post("/api/todoPatternUpdate", requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.body?.id);
+    if (!Number.isInteger(id) || id <= 0) return sendJson(res, 400, { ok: false, message: "invalid id" });
+
+    const [rows] = await safeQuery(
+      "SELECT pattern_url AS patternUrl, pattern_key AS patternKey FROM user_todo_patterns WHERE user_id=? AND id=? LIMIT 1",
+      [req.user.id, id]
+    );
+    if (!rows || rows.length === 0) return sendJson(res, 404, { ok: false, message: "not found" });
+    const base = rows[0] || {};
+
+    const pattern = req.body?.pattern ? String(req.body.pattern).slice(0, 64) : null;
+    const hasPatternUrl = Object.prototype.hasOwnProperty.call(req.body || {}, "patternUrl");
+    const hasPatternKey = Object.prototype.hasOwnProperty.call(req.body || {}, "patternKey");
+    const patternUrl = hasPatternUrl ? normPatternUrl(req.body?.patternUrl) : normPatternUrl(base.patternUrl);
+    const patternKey = hasPatternKey ? normPatternKey(req.body?.patternKey) : normPatternKey(base.patternKey);
+    if (!patternUrl) return sendJson(res, 400, { ok: false, message: "patternUrl required" });
+
+    const patternCategoryRaw = req.body?.patternCategoryId;
+    let patternCategoryId = null;
+    if (patternCategoryRaw !== undefined && patternCategoryRaw !== null && patternCategoryRaw !== "") {
+      const cid = parseCategoryId(patternCategoryRaw);
+      if (!cid) return sendJson(res, 400, { ok: false, message: "invalid category" });
+      const [catRows] = await safeQuery(
+        "SELECT id FROM user_pattern_categories WHERE user_id=? AND id=? LIMIT 1",
+        [req.user.id, cid]
+      );
+      if (!catRows || catRows.length === 0) return sendJson(res, 400, { ok: false, message: "分类不存在" });
+      patternCategoryId = cid;
+    }
+
+    const items = normalizeTodoItems(req.body?.items || []);
+    if (items.length === 0) return sendJson(res, 400, { ok: false, message: "empty items" });
+    if (items.length > 500) return sendJson(res, 400, { ok: false, message: "too many items" });
+
+    const codes = items.map(it => it.code);
+    {
+      const inPh = codes.map(() => "?").join(",");
+      const [pRows] = await safeQuery(
+        `SELECT code FROM palette WHERE code IN (${inPh})`,
+        codes
+      );
+      const pSet = new Set((pRows || []).map(r => String(r.code).toUpperCase()));
+      for (const c of codes) {
+        if (!pSet.has(c)) return sendJson(res, 400, { ok: false, message: `unknown code: ${c}` });
+      }
+      const [rmRows] = await safeQuery(
+        `SELECT code FROM user_removed_codes WHERE user_id=? AND code IN (${inPh})`,
+        [req.user.id, ...codes]
+      );
+      if (rmRows && rmRows.length > 0) {
+        return sendJson(res, 400, { ok: false, message: "包含已删除的色号，请先在设置中重新添加色号" });
+      }
+    }
+
+    const totalQty = items.reduce((acc, it) => acc + (Number(it.qty) || 0), 0);
+    const itemsJson = JSON.stringify(items);
+    await safeQuery(
+      "UPDATE user_todo_patterns SET pattern=?, pattern_url=?, pattern_key=?, pattern_category_id=?, items_json=?, total_qty=? WHERE user_id=? AND id=?",
+      [pattern, patternUrl, patternKey, patternCategoryId, itemsJson, totalQty, req.user.id, id]
+    );
+    sendJson(res, 200, { ok: true });
+  } catch (e) {
+    sendJson(res, 500, { ok: false, message: e.message });
+  }
+});
+
+app.post("/api/todoPatternDelete", requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.body?.id);
+    if (!Number.isInteger(id) || id <= 0) return sendJson(res, 400, { ok: false, message: "invalid id" });
+    await safeQuery("DELETE FROM user_todo_patterns WHERE user_id=? AND id=?", [req.user.id, id]);
+    sendJson(res, 200, { ok: true });
+  } catch (e) {
+    sendJson(res, 500, { ok: false, message: e.message });
+  }
+});
+
+app.post("/api/todoPatternComplete", requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.body?.id);
+    if (!Number.isInteger(id) || id <= 0) return sendJson(res, 400, { ok: false, message: "invalid id" });
+
+    const [rows] = await safeQuery(
+      "SELECT pattern, pattern_url AS patternUrl, pattern_key AS patternKey, pattern_category_id AS patternCategoryId, items_json AS itemsJson FROM user_todo_patterns WHERE user_id=? AND id=? LIMIT 1",
+      [req.user.id, id]
+    );
+    if (!rows || rows.length === 0) return sendJson(res, 404, { ok: false, message: "not found" });
+    const row = rows[0] || {};
+    if (!row.patternUrl) return sendJson(res, 400, { ok: false, message: "patternUrl required" });
+
+    let items = [];
+    try { items = JSON.parse(row.itemsJson || "[]") || []; } catch {}
+    const normalized = normalizeTodoItems(items);
+    if (normalized.length === 0) return sendJson(res, 400, { ok: false, message: "empty items" });
+    if (normalized.length > 500) return sendJson(res, 400, { ok: false, message: "too many items" });
+
+    const codes = normalized.map(it => it.code);
+    {
+      const inPh = codes.map(() => "?").join(",");
+      const [pRows] = await safeQuery(
+        `SELECT code, is_default AS isDefault FROM palette WHERE code IN (${inPh})`,
+        codes
+      );
+      const pMap = new Map((pRows || []).map(r => [String(r.code).toUpperCase(), Number(r.isDefault)]));
+      for (const c of codes) {
+        if (!pMap.has(c)) return sendJson(res, 400, { ok: false, message: `unknown code: ${c}` });
+      }
+      const [rmRows] = await safeQuery(
+        `SELECT code FROM user_removed_codes WHERE user_id=? AND code IN (${inPh})`,
+        [req.user.id, ...codes]
+      );
+      if (rmRows && rmRows.length > 0) {
+        return sendJson(res, 400, { ok: false, message: "包含已删除的色号，请先在设置中重新添加色号" });
+      }
+      const nonDefaultCodes = codes.filter(c => pMap.get(c) === 0);
+      if (nonDefaultCodes.length > 0) {
+        const inPh2 = nonDefaultCodes.map(() => "?").join(",");
+        const [invRows] = await safeQuery(
+          `SELECT code FROM user_inventory WHERE user_id=? AND code IN (${inPh2})`,
+          [req.user.id, ...nonDefaultCodes]
+        );
+        const invSet = new Set((invRows || []).map(r => String(r.code).toUpperCase()));
+        for (const c of nonDefaultCodes) {
+          if (!invSet.has(c)) {
+            return sendJson(res, 400, { ok: false, message: "包含未添加到库存的非默认色号，请先在设置中添加对应系列" });
+          }
+        }
+      }
+    }
+
+    const batchId = newBatchId();
+    await withTransaction(async (conn) => {
+      {
+        const inPh = codes.map(() => "?").join(",");
+        const params = [req.user.id, ...codes];
+        await q(conn,
+          `INSERT IGNORE INTO user_inventory(user_id, code, qty, hex)
+           SELECT ?, p.code, 0, p.hex
+           FROM palette p
+           WHERE p.is_default=1 AND p.code IN (${inPh})`,
+          params
+        );
+      }
+
+      {
+        const cases = [];
+        const params = [];
+        for (const it of normalized) {
+          cases.push("WHEN ? THEN ?");
+          params.push(it.code, -Math.abs(Math.floor(it.qty)));
+        }
+        const inPlaceholders = codes.map(() => "?").join(",");
+        const sql = `
+          UPDATE user_inventory
+          SET qty = qty + CASE code
+            ${cases.join(" ")}
+            ELSE 0
+          END
+          WHERE user_id = ? AND code IN (${inPlaceholders})
+        `;
+        params.push(req.user.id, ...codes);
+        await q(conn, sql, params);
+      }
+
+      {
+        const vals = [];
+        const params = [];
+        for (const it of normalized) {
+          vals.push("(?,?,?,?,?,?,?,?,?,?)");
+          params.push(
+            req.user.id,
+            it.code,
+            "consume",
+            Math.abs(Math.floor(it.qty)),
+            row.pattern || null,
+            row.patternUrl,
+            row.patternKey || null,
+            row.patternCategoryId || null,
+            "todo",
+            batchId
+          );
+        }
+        await q(conn,
+          `INSERT INTO user_history(user_id, code, htype, qty, pattern, pattern_url, pattern_key, pattern_category_id, source, batch_id)
+           VALUES ${vals.join(",")}`,
+          params
+        );
+      }
+
+      await q(conn, "DELETE FROM user_todo_patterns WHERE user_id=? AND id=?", [req.user.id, id]);
+    });
+
+    sendJson(res, 200, { ok: true });
+  } catch (e) {
+    sendJson(res, 500, { ok: false, message: e.message });
   }
 });
 
@@ -1142,6 +1480,7 @@ app.post("/api/resetAll", requireAuth, async (req, res) => {
     // 全部色号数量归零 + 清空历史记录
     await safeQuery("UPDATE user_inventory SET qty=0 WHERE user_id=?", [req.user.id]);
     await safeQuery("DELETE FROM user_history WHERE user_id=?", [req.user.id]);
+    await safeQuery("DELETE FROM user_todo_patterns WHERE user_id=?", [req.user.id]);
 
     // 移除所有非默认色号
     await safeQuery(
