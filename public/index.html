@@ -3412,6 +3412,7 @@ body.theme-light #todoDialog .records-consume .record-thumb::after{
 
   <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/ali-oss@6.20.0/dist/aliyun-oss-sdk.min.js"></script>
   <script>
 const API_BASE = window.location.origin;
 
@@ -4508,87 +4509,12 @@ function formatTimeSecondParts(iso){
       return res.json();
     }
 
-    // ----- OSS SDK lazy loader -----
-    const OSS_SDK_URLS = [
-      "https://gosspublic.alicdn.com/aliyun-oss-sdk.min.js"
-    ];
-    const OSS_SDK_TIMEOUT_MS = 10000;
-    const OSS_SDK_MAX_RETRIES = 2;
-    let OSS_SDK_PROMISE = null;
-
-    function _loadOssSdkOnce(url){
-      return new Promise((resolve, reject)=>{
-        if(window.OSS) return resolve();
-        const script = document.createElement("script");
-        let done = false;
-        console.info("[OSS SDK] loading", url);
-        const cleanup = (err)=>{
-          if(done) return;
-          done = true;
-          if(timer) clearTimeout(timer);
-          script.onload = null;
-          script.onerror = null;
-          if(err){
-            try{ script.remove(); }catch{}
-            reject(err);
-          }else{
-            resolve();
-          }
-        };
-        const timer = setTimeout(()=>{
-          cleanup(new Error(`oss sdk load timeout ${OSS_SDK_TIMEOUT_MS}ms`));
-        }, OSS_SDK_TIMEOUT_MS);
-        script.async = true;
-        script.src = url;
-        script.onload = ()=>{
-          if(window.OSS){
-            console.info("[OSS SDK] loaded", url);
-            cleanup();
-          }else{
-            cleanup(new Error("oss sdk loaded but window.OSS missing"));
-          }
-        };
-        script.onerror = ()=>{
-          cleanup(new Error("oss sdk load error"));
-        };
-        document.head.appendChild(script);
-      });
-    }
-
-    function loadOssSdk(){
-      if(window.OSS) return Promise.resolve();
-      if(OSS_SDK_PROMISE) return OSS_SDK_PROMISE;
-      const totalAttempts = Math.max(1, OSS_SDK_MAX_RETRIES + 1);
-      OSS_SDK_PROMISE = (async()=>{
-        let lastErr = null;
-        for(let i=0;i<totalAttempts;i++){
-          const url = OSS_SDK_URLS[Math.min(i, OSS_SDK_URLS.length - 1)];
-          try{
-            await _loadOssSdkOnce(url);
-            return;
-          }catch(e){
-            lastErr = e;
-            console.error(`[OSS SDK] load failed (${url})`, e);
-          }
-        }
-        throw lastErr || new Error("oss sdk load failed");
-      })().catch(err=>{
-        OSS_SDK_PROMISE = null;
-        throw err;
-      });
-      return OSS_SDK_PROMISE;
-    }
-
-    function warmupOssSdk(){
-      loadOssSdk().catch((err)=>console.warn("[OSS SDK] warmup failed", err));
-    }
-
     // ----- OSS upload helpers (STS) -----
     const OSS_STATE = {
       client: null,
       expiration: 0,
       uploadPrefix: "",
-      cdnBaseUrl: "https://beads-patterns.oss-cn-beijing.aliyuncs.com"
+      cdnBaseUrl: "https://img.leobeads.xyz"
     };
     const OSS_ALLOWED_TYPES = new Set(["image/jpeg","image/png","image/webp"]);
     const OSS_ALLOWED_EXT = new Set(["jpg","jpeg","png","webp"]);
@@ -4596,12 +4522,6 @@ function formatTimeSecondParts(iso){
     function normalizeUploadPrefix(prefix){
       const base = String(prefix || "").replace(/^\/+|\/+$/g, "");
       return base ? `${base}/` : "";
-    }
-    function normalizeHttpsUrl(base, fallback){
-      const value = String(base || "").trim();
-      if(!value) return String(fallback || "");
-      if(/^https?:\/\//i.test(value)) return value;
-      return `https://${value}`;
     }
     function inferImageExt(file){
       const name = String(file?.name || "");
@@ -4684,47 +4604,21 @@ function formatTimeSecondParts(iso){
       return { blob, ext, mime: targetType };
     }
     async function fetchOssSts(){
-      console.info("[OSS] fetch STS: start");
       const res = await apiGet("/api/oss/sts");
       const data = res?.data || res;
       if(!data || !data.accessKeyId || !data.accessKeySecret || !data.securityToken){
-        console.warn("[OSS] fetch STS: invalid response", data);
         throw new Error("OSS 凭证获取失败");
       }
-      console.info("[OSS] fetch STS: ok", {
-        region: data.region,
-        bucket: data.bucket,
-        endpoint: data.endpoint,
-        cname: data.cname,
-        uploadPrefix: data.uploadPrefix,
-        cdnBaseUrl: data.cdnBaseUrl,
-        expiration: data.expiration
-      });
       return data;
     }
     async function ensureOssClient(){
       if(!IS_LOGGED_IN) throw new Error("请登录后上传图纸");
-      try{
-        await loadOssSdk();
-      }catch(e){
-        console.error("[OSS SDK] load failed before client init", e);
-        throw new Error("图纸上传组件加载失败，请检查网络或稍后重试");
-      }
-      if(!window.OSS) throw new Error("图纸上传组件加载失败，请检查网络或稍后重试");
+      if(!window.OSS) throw new Error("OSS SDK 未加载");
       const now = Date.now();
       if(OSS_STATE.client && OSS_STATE.expiration - now > 60 * 1000){
         return OSS_STATE;
       }
       const data = await fetchOssSts();
-      console.info("[OSS] init client", {
-        region: data.region,
-        bucket: data.bucket,
-        endpoint: data.endpoint,
-        cname: data.cname,
-        uploadPrefix: data.uploadPrefix,
-        cdnBaseUrl: data.cdnBaseUrl,
-        expiration: data.expiration
-      });
       OSS_STATE.client = new window.OSS({
         region: data.region,
         bucket: data.bucket,
@@ -4737,75 +4631,19 @@ function formatTimeSecondParts(iso){
       });
       OSS_STATE.expiration = Date.parse(data.expiration || "") || 0;
       OSS_STATE.uploadPrefix = String(data.uploadPrefix || "");
-      OSS_STATE.cdnBaseUrl = normalizeHttpsUrl(data.cdnBaseUrl, OSS_STATE.cdnBaseUrl);
+      OSS_STATE.cdnBaseUrl = String(data.cdnBaseUrl || OSS_STATE.cdnBaseUrl);
       return OSS_STATE;
     }
     async function uploadPatternImage(file){
       if(!file) return null;
       if(!isAllowedImageFile(file)) throw new Error("仅支持 JPG/PNG/WebP 图片");
-      console.info("[OSS] upload start", {name: file.name, type: file.type, size: file.size});
       const oss = await ensureOssClient();
       const prepared = await compressImageFile(file);
       const objectKey = buildObjectKey(oss.uploadPrefix, prepared.ext);
       const mime = prepared.mime || file.type || "image/jpeg";
-      console.info("[OSS] upload prepared", {objectKey, ext: prepared.ext, mime, size: prepared.blob?.size || file.size});
-      const preparedSize = Number(prepared.blob?.size || file.size || 0);
-      const usePut = preparedSize > 0 && preparedSize <= 4 * 1024 * 1024;
-      console.info("[OSS] upload method", {method: usePut ? "put" : "multipart", size: preparedSize});
-      const result = usePut
-        ? await oss.client.put(objectKey, prepared.blob, { mime })
-        : await oss.client.multipartUpload(objectKey, prepared.blob, { mime });
-      console.info("[OSS] upload response", {
-        objectKey,
-        status: result?.res?.status || "",
-        requestId: result?.res?.headers?.["x-oss-request-id"] || "",
-        etag: result?.etag || result?.res?.headers?.etag || ""
-      });
-      try{
-        const headRes = await oss.client.head(objectKey);
-        console.info("[OSS] upload verify ok", {
-          objectKey,
-          status: headRes?.res?.status || headRes?.status || "",
-          requestId: headRes?.res?.headers?.["x-oss-request-id"] || ""
-        });
-        try{
-          const listPrefix = objectKey.slice(0, objectKey.lastIndexOf("/") + 1);
-          const listRes = await oss.client.list({ prefix: listPrefix, "max-keys": 5 });
-          console.info("[OSS] list verify", {
-            prefix: listPrefix,
-            objects: (listRes?.objects || []).map(item => item?.name).filter(Boolean)
-          });
-        }catch(listErr){
-          console.error("[OSS] list verify failed", {
-            message: listErr?.message || String(listErr),
-            code: listErr?.code || "",
-            status: listErr?.status || listErr?.res?.status || "",
-            requestId: listErr?.requestId || listErr?.res?.headers?.["x-oss-request-id"] || ""
-          });
-        }
-        try{
-          const signedUrl = oss.client.signatureUrl(objectKey, { expires: 3600 });
-          console.info("[OSS] signed url", { objectKey, signedUrl, expires: 3600 });
-        }catch(signErr){
-          console.error("[OSS] signed url failed", {
-            message: signErr?.message || String(signErr),
-            code: signErr?.code || "",
-            status: signErr?.status || signErr?.res?.status || "",
-            requestId: signErr?.requestId || signErr?.res?.headers?.["x-oss-request-id"] || ""
-          });
-        }
-      }catch(err){
-        console.error("[OSS] upload verify failed", {
-          objectKey,
-          message: err?.message || String(err),
-          code: err?.code || "",
-          status: err?.status || err?.res?.status || "",
-          requestId: err?.requestId || err?.res?.headers?.["x-oss-request-id"] || ""
-        });
-      }
-      const base = normalizeHttpsUrl(oss.cdnBaseUrl, "https://beads-patterns.oss-cn-beijing.aliyuncs.com").replace(/\/+$/g, "");
+      const result = await oss.client.multipartUpload(objectKey, prepared.blob, { mime });
+      const base = String(oss.cdnBaseUrl || "https://img.leobeads.xyz").replace(/\/+$/g, "");
       const cdnUrl = `${base}/${objectKey}`;
-      console.info("[OSS] upload done", {objectKey, cdnUrl, etag: result?.etag || ""});
       return {
         objectKey,
         cdnUrl,
@@ -5601,7 +5439,6 @@ function toast(message,type="success"){
         return;
       }
       labelEl.textContent = file.name || "已选择图纸";
-      warmupOssSdk();
     }
 
     async function maybeUploadPatternImage(file){
@@ -7913,12 +7750,11 @@ if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
         if(!isAllowedImageFile(file)){
           toast("仅支持 JPG/PNG/WebP 图片","error");
           recordEditImageInput.value = "";
-          updateRecordEditImageUI();
-          return;
-        }
-        warmupOssSdk();
-        clearRecordEditPreviewUrl();
-        RECORD_EDIT_IMAGE.file = file;
+        updateRecordEditImageUI();
+        return;
+      }
+      clearRecordEditPreviewUrl();
+      RECORD_EDIT_IMAGE.file = file;
         RECORD_EDIT_IMAGE.removed = false;
         RECORD_EDIT_IMAGE.changed = true;
         RECORD_EDIT_IMAGE.previewUrl = URL.createObjectURL(file);
