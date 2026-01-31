@@ -1417,6 +1417,14 @@ dialog{
   max-height: calc(100dvh - 24px);
   overflow: hidden;
 }
+dialog button:focus{
+  outline:none;
+  box-shadow:none;
+}
+dialog button:focus-visible{
+  outline:2px solid rgba(14,165,233,.6);
+  outline-offset:2px;
+}
 dialog.is-locked{
   pointer-events:none;
 }
@@ -1845,23 +1853,31 @@ body.theme-light #worksStats .stats-card{
 }
 .work-card-meta{
   display:flex;
-  flex-wrap:wrap;
-  gap:8px;
+  align-items:center;
+  flex-wrap:nowrap;
+  min-width:0;
+  line-height:1.2;
+  font-variant-numeric: tabular-nums;
   color:var(--muted);
   font-size:11px;
-  align-items:center;
+  white-space:nowrap;
+  gap:10px;
 }
 .work-card-meta .meta-item{
   display:flex;
   align-items:center;
-  gap:4px;
+  gap:2px;
+  white-space:nowrap;
+  line-height:1.2;
 }
 .work-card-meta svg{
-  width:12px;
-  height:12px;
+  width:14px;
+  height:14px;
   stroke: currentColor;
   fill:none;
-  stroke-width:1.8;
+  stroke-width:1.6;
+  flex:0 0 auto;
+  display:block;
 }
 .work-detail-image{
   border-radius:12px;
@@ -3035,7 +3051,7 @@ body.theme-light #recordsDialog .stats-card{
       --accent-2:#f97316;
       --warn:#f59e0b;
       --ok:#22c55e;
-      --tabbar-height:76px;
+      --tabbar-height:64px;
     }
 
     body.theme-light{
@@ -3240,7 +3256,7 @@ body.theme-light #recordsDialog .stats-card{
       border-radius: 0;
     }
 
-    .tabbar{
+.tabbar{
       position: fixed;
       left: 0;
       right: 0;
@@ -3248,7 +3264,7 @@ body.theme-light #recordsDialog .stats-card{
       height: var(--tabbar-height);
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
-      padding: 10px 18px calc(12px + env(safe-area-inset-bottom));
+      padding: 8px 16px calc(10px + env(safe-area-inset-bottom));
       background: rgba(10,14,18,.82);
       border-top: 1px solid var(--border);
       backdrop-filter: blur(16px);
@@ -3256,7 +3272,7 @@ body.theme-light #recordsDialog .stats-card{
     }
     body.theme-light .tabbar{ background: rgba(255,255,255,.86); }
 
-    .tabbar-btn{
+.tabbar-btn{
       border: 0;
       background: transparent;
       color: var(--muted);
@@ -3267,8 +3283,8 @@ body.theme-light #recordsDialog .stats-card{
       font-size:11px;
       padding:6px 0;
       position:relative;
-      min-height: 44px;
-    }
+      min-height: 40px;
+}
     .tabbar-btn:hover,
     .tabbar-btn:active{
       transform:none;
