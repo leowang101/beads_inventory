@@ -1677,6 +1677,40 @@ dialog .modal-body{
 .works-stats{
   margin-top:0;
 }
+#worksStats.stats-cards{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap:12px;
+  align-items:stretch;
+}
+#worksStats .stats-card{
+  border-radius:14px;
+  padding:10px 12px;
+  background:
+    radial-gradient(120% 120% at 10% 0%, rgba(34,211,238,.18), rgba(34,211,238,0) 55%),
+    radial-gradient(120% 120% at 90% 0%, rgba(249,115,22,.16), rgba(249,115,22,0) 55%),
+    var(--panel-2);
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow: 0 10px 24px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+body.theme-light #worksStats .stats-card{
+  border-color: rgba(15,23,42,.08);
+  box-shadow: 0 12px 22px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.7);
+}
+#worksStats .stats-card-label{
+  font-size:11px;
+  color:var(--muted);
+  letter-spacing:.2px;
+}
+#worksStats .stats-card-value{
+  font-size:16px;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  color:var(--text);
+}
 #pageWorks{
   position: relative;
 }
