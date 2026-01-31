@@ -1068,7 +1068,7 @@ body.theme-light .work-upload-illus{
   overflow:hidden;
   background: rgba(0,0,0,.04);
   touch-action: none;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
 }
 .work-cropper-stage .cropper-container,
 .work-cropper-stage .cropper-canvas,
@@ -1454,6 +1454,8 @@ dialog .modal-body{
 .work-cropper-dialog{
   width:min(560px, 92vw);
   z-index: 9003;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 .work-cropper-dialog .modal-body{
   display:flex;
@@ -3061,7 +3063,7 @@ body.theme-light #recordsDialog .stats-card{
       --accent-2:#f97316;
       --warn:#f59e0b;
       --ok:#22c55e;
-      --tabbar-height:64px;
+      --tabbar-height:60px;
     }
 
     body.theme-light{
@@ -3079,10 +3081,19 @@ body.theme-light #recordsDialog .stats-card{
 
     body{
       font-family:"Avenir Next Rounded","SF Pro Rounded","PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;
+      background: var(--bg);
+      position: relative;
+    }
+    body::before{
+      content:"";
+      position: fixed;
+      inset: 0;
       background:
         radial-gradient(1200px 600px at 8% -12%, rgba(34,211,238,.14), transparent 60%),
         radial-gradient(1200px 600px at 92% -8%, rgba(249,115,22,.14), transparent 60%),
         var(--bg);
+      z-index:-1;
+      pointer-events:none;
     }
 
     .app-main{
@@ -3274,12 +3285,13 @@ body.theme-light #recordsDialog .stats-card{
       height: var(--tabbar-height);
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
-      padding: 8px 16px calc(10px + env(safe-area-inset-bottom));
+      padding: 6px 14px calc(8px + env(safe-area-inset-bottom));
       background: rgba(10,14,18,.82);
       border-top: 1px solid var(--border);
       backdrop-filter: blur(16px);
       z-index: 8995;
-    }
+      overflow: visible;
+}
     body.theme-light .tabbar{ background: rgba(255,255,255,.86); }
 
 .tabbar-btn{
@@ -3289,36 +3301,39 @@ body.theme-light #recordsDialog .stats-card{
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:4px;
-      font-size:11px;
-      padding:6px 0;
+      gap:1px;
+      font-size:10px;
+      padding:2px 0;
       position:relative;
-      min-height: 40px;
+      min-height: 36px;
+      justify-content:center;
 }
     .tabbar-btn:hover,
     .tabbar-btn:active{
       transform:none;
       border-color: transparent;
     }
-    .tabbar-btn svg{
-      width:22px;
-      height:22px;
+.tabbar-btn svg{
+      width:28px;
+      height:28px;
       stroke: currentColor;
       fill: none;
-      stroke-width: 1.8;
-    }
-    .tabbar-btn.active{
-      color: var(--text);
-    }
-    .tabbar-btn.active .tab-label{ font-weight:700; }
-    .tabbar-btn.active::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      border-radius:14px;
-      background: rgba(34,211,238,.14);
-      z-index:-1;
-    }
+      stroke-width: 1;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink:0;
+      display:block;
+}
+.tab-label{
+      line-height:1.1;
+}
+.tabbar-btn.active{
+      color: var(--accent);
+}
+.tabbar-btn.active .tab-label{ font-weight:700; }
+.tabbar-btn.active::before{
+      display:none;
+}
 
     .btn-primary{
       background: linear-gradient(135deg, rgba(34,211,238,.24), rgba(34,211,238,.06));

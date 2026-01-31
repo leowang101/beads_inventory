@@ -3495,6 +3495,14 @@ const criticalInput=document.getElementById("criticalInput");
         toast("裁剪组件加载失败，请稍后再试","error");
         return;
       }
+      if(!workCropperWrap.__gestureGuard){
+        const guard = (e)=>{
+          if(e.cancelable) e.preventDefault();
+        };
+        workCropperWrap.addEventListener("touchstart", guard, {passive:false});
+        workCropperWrap.addEventListener("touchmove", guard, {passive:false});
+        workCropperWrap.__gestureGuard = true;
+      }
       if(workDialog) workDialog.classList.add("is-locked");
       if(workCropperDialog) openDialog(workCropperDialog);
       const bd = document.querySelector('.modal-backdrop');
@@ -3528,30 +3536,38 @@ const criticalInput=document.getElementById("criticalInput");
             ready(){
               const cropper = WORK_STATE.cropper;
               if(cropper && workCropperZoom){
-                const container = cropper.getContainerData();
-                if(container && Number.isFinite(container.width) && Number.isFinite(container.height)){
-                  const size = Math.min(container.width, container.height);
-                  const left = (container.width - size) / 2;
-                  const top = (container.height - size) / 2;
-                  try{
-                    cropper.setCropBoxData({ left, top, width: size, height: size });
-                  }catch{}
-                }
-                const imageData = cropper.getImageData();
-                const cropBox = cropper.getCropBoxData();
-                let ratio = imageData?.ratio;
-                if(!Number.isFinite(ratio) || ratio <= 0){
-                  const nW = Number(imageData?.naturalWidth || 0);
-                  const nH = Number(imageData?.naturalHeight || 0);
-                  const cW = Number(cropBox?.width || 0);
-                  const cH = Number(cropBox?.height || 0);
-                  if(nW > 0 && nH > 0 && cW > 0 && cH > 0){
-                    ratio = Math.max(cW / nW, cH / nH);
+                const fitCropBox = ()=>{
+                  const container = cropper.getContainerData();
+                  if(container && Number.isFinite(container.width) && Number.isFinite(container.height)){
+                    const size = Math.min(container.width, container.height);
+                    const left = (container.width - size) / 2;
+                    const top = (container.height - size) / 2;
+                    try{
+                      cropper.setCropBoxData({ left, top, width: size, height: size });
+                    }catch{}
                   }
-                }
-                if(!Number.isFinite(ratio) || ratio <= 0) ratio = 1;
-                WORK_STATE.cropperBaseRatio = ratio;
-                try{ cropper.zoomTo(ratio); }catch{}
+                };
+                const updateBaseRatio = ()=>{
+                  const imageData = cropper.getImageData();
+                  const cropBox = cropper.getCropBoxData();
+                  let ratio = imageData?.ratio;
+                  if(!Number.isFinite(ratio) || ratio <= 0){
+                    const nW = Number(imageData?.naturalWidth || 0);
+                    const nH = Number(imageData?.naturalHeight || 0);
+                    const cW = Number(cropBox?.width || 0);
+                    const cH = Number(cropBox?.height || 0);
+                    if(nW > 0 && nH > 0 && cW > 0 && cH > 0){
+                      ratio = Math.max(cW / nW, cH / nH);
+                    }
+                  }
+                  if(!Number.isFinite(ratio) || ratio <= 0) ratio = 1;
+                  WORK_STATE.cropperBaseRatio = ratio;
+                  try{ cropper.zoomTo(ratio); }catch{}
+                };
+                fitCropBox();
+                updateBaseRatio();
+                requestAnimationFrame(()=>{ fitCropBox(); updateBaseRatio(); });
+                setTimeout(()=>{ fitCropBox(); updateBaseRatio(); }, 80);
                 workCropperZoom.min = "1";
                 workCropperZoom.max = "3";
                 workCropperZoom.step = "0.01";
