@@ -131,302 +131,44 @@ const API_BASE = window.location.origin;
       if(raw) COLLAPSED_SERIES = JSON.parse(raw) || {};
     }catch{}
 
-            const MASTER_PALETTE = [
-      { code: "A1", hex: "#FAF5CD", series: "A系列", isDefault: true },
-      { code: "A2", hex: "#FCFED6", series: "A系列", isDefault: true },
-      { code: "A3", hex: "#FCFF92", series: "A系列", isDefault: true },
-      { code: "A4", hex: "#F7EC5C", series: "A系列", isDefault: true },
-      { code: "A5", hex: "#FFE44B", series: "A系列", isDefault: true },
-      { code: "A6", hex: "#FDA951", series: "A系列", isDefault: true },
-      { code: "A7", hex: "#FA8C4F", series: "A系列", isDefault: true },
-      { code: "A8", hex: "#F9E045", series: "A系列", isDefault: true },
-      { code: "A9", hex: "#F99C5F", series: "A系列", isDefault: true },
-      { code: "A10", hex: "#F47E36", series: "A系列", isDefault: true },
-      { code: "A11", hex: "#FEDB99", series: "A系列", isDefault: true },
-      { code: "A12", hex: "#FDA276", series: "A系列", isDefault: true },
-      { code: "A13", hex: "#FEC667", series: "A系列", isDefault: true },
-      { code: "A14", hex: "#F85842", series: "A系列", isDefault: true },
-      { code: "A15", hex: "#FBF65E", series: "A系列", isDefault: true },
-      { code: "A16", hex: "#FEFF97", series: "A系列", isDefault: true },
-      { code: "A17", hex: "#FDE173", series: "A系列", isDefault: true },
-      { code: "A18", hex: "#FCBF80", series: "A系列", isDefault: true },
-      { code: "A19", hex: "#FD7E77", series: "A系列", isDefault: true },
-      { code: "A20", hex: "#F9D66E", series: "A系列", isDefault: true },
-      { code: "A21", hex: "#FAE393", series: "A系列", isDefault: true },
-      { code: "A22", hex: "#EDF878", series: "A系列", isDefault: true },
-      { code: "A23", hex: "#E1C9BD", series: "A系列", isDefault: true },
-      { code: "A24", hex: "#F3F6A9", series: "A系列", isDefault: true },
-      { code: "A25", hex: "#FFD785", series: "A系列", isDefault: true },
-      { code: "A26", hex: "#FEC832", series: "A系列", isDefault: true },
-      { code: "B1", hex: "#DFF139", series: "B系列", isDefault: true },
-      { code: "B2", hex: "#64F343", series: "B系列", isDefault: true },
-      { code: "B3", hex: "#9FF685", series: "B系列", isDefault: true },
-      { code: "B4", hex: "#5FDF34", series: "B系列", isDefault: true },
-      { code: "B5", hex: "#39E158", series: "B系列", isDefault: true },
-      { code: "B6", hex: "#64E0A4", series: "B系列", isDefault: true },
-      { code: "B7", hex: "#3FAE7C", series: "B系列", isDefault: true },
-      { code: "B8", hex: "#1D9E54", series: "B系列", isDefault: true },
-      { code: "B9", hex: "#2A5037", series: "B系列", isDefault: true },
-      { code: "B10", hex: "#9AD1BA", series: "B系列", isDefault: true },
-      { code: "B11", hex: "#627032", series: "B系列", isDefault: true },
-      { code: "B12", hex: "#1A6E3D", series: "B系列", isDefault: true },
-      { code: "B13", hex: "#C8E87D", series: "B系列", isDefault: true },
-      { code: "B14", hex: "#ACE84C", series: "B系列", isDefault: true },
-      { code: "B15", hex: "#305335", series: "B系列", isDefault: true },
-      { code: "B16", hex: "#C0ED9C", series: "B系列", isDefault: true },
-      { code: "B17", hex: "#9EB33E", series: "B系列", isDefault: true },
-      { code: "B18", hex: "#E6ED4F", series: "B系列", isDefault: true },
-      { code: "B19", hex: "#26B78E", series: "B系列", isDefault: true },
-      { code: "B20", hex: "#CAEDCF", series: "B系列", isDefault: true },
-      { code: "B21", hex: "#176268", series: "B系列", isDefault: true },
-      { code: "B22", hex: "#0A4241", series: "B系列", isDefault: true },
-      { code: "B23", hex: "#343B1A", series: "B系列", isDefault: true },
-      { code: "B24", hex: "#E8FAA6", series: "B系列", isDefault: true },
-      { code: "B25", hex: "#4E846D", series: "B系列", isDefault: true },
-      { code: "B26", hex: "#907C35", series: "B系列", isDefault: true },
-      { code: "B27", hex: "#D0E0AF", series: "B系列", isDefault: true },
-      { code: "B28", hex: "#9EE5BB", series: "B系列", isDefault: true },
-      { code: "B29", hex: "#C6DF5F", series: "B系列", isDefault: true },
-      { code: "B30", hex: "#E3FBB1", series: "B系列", isDefault: true },
-      { code: "B31", hex: "#B2E694", series: "B系列", isDefault: true },
-      { code: "B32", hex: "#92AD60", series: "B系列", isDefault: true },
-      { code: "C1", hex: "#FFFEE4", series: "C系列", isDefault: true },
-      { code: "C2", hex: "#ABF8FE", series: "C系列", isDefault: true },
-      { code: "C3", hex: "#9EE0F8", series: "C系列", isDefault: true },
-      { code: "C4", hex: "#44CDFB", series: "C系列", isDefault: true },
-      { code: "C5", hex: "#06ABE3", series: "C系列", isDefault: true },
-      { code: "C6", hex: "#54A7E9", series: "C系列", isDefault: true },
-      { code: "C7", hex: "#3977CC", series: "C系列", isDefault: true },
-      { code: "C8", hex: "#0F52BD", series: "C系列", isDefault: true },
-      { code: "C9", hex: "#3349C3", series: "C系列", isDefault: true },
-      { code: "C10", hex: "#3DBBE3", series: "C系列", isDefault: true },
-      { code: "C11", hex: "#2ADED3", series: "C系列", isDefault: true },
-      { code: "C12", hex: "#1E334E", series: "C系列", isDefault: true },
-      { code: "C13", hex: "#CDE7FE", series: "C系列", isDefault: true },
-      { code: "C14", hex: "#D6FDFC", series: "C系列", isDefault: true },
-      { code: "C15", hex: "#21C5C4", series: "C系列", isDefault: true },
-      { code: "C16", hex: "#1858A2", series: "C系列", isDefault: true },
-      { code: "C17", hex: "#02D1F3", series: "C系列", isDefault: true },
-      { code: "C18", hex: "#213244", series: "C系列", isDefault: true },
-      { code: "C19", hex: "#188690", series: "C系列", isDefault: true },
-      { code: "C20", hex: "#1A70A9", series: "C系列", isDefault: true },
-      { code: "C21", hex: "#BEDDFC", series: "C系列", isDefault: true },
-      { code: "C22", hex: "#6BB1BB", series: "C系列", isDefault: true },
-      { code: "C23", hex: "#C8E2F9", series: "C系列", isDefault: true },
-      { code: "C24", hex: "#7EC5F9", series: "C系列", isDefault: true },
-      { code: "C25", hex: "#A9E8E0", series: "C系列", isDefault: true },
-      { code: "C26", hex: "#42ADD1", series: "C系列", isDefault: true },
-      { code: "C27", hex: "#D0DEEF", series: "C系列", isDefault: true },
-      { code: "C28", hex: "#BDCEED", series: "C系列", isDefault: true },
-      { code: "C29", hex: "#364A89", series: "C系列", isDefault: true },
-      { code: "D1", hex: "#ACB7EF", series: "D系列", isDefault: true },
-      { code: "D2", hex: "#868DD3", series: "D系列", isDefault: true },
-      { code: "D3", hex: "#3653AF", series: "D系列", isDefault: true },
-      { code: "D4", hex: "#162C7E", series: "D系列", isDefault: true },
-      { code: "D5", hex: "#B34EC6", series: "D系列", isDefault: true },
-      { code: "D6", hex: "#B37BDC", series: "D系列", isDefault: true },
-      { code: "D7", hex: "#8758A9", series: "D系列", isDefault: true },
-      { code: "D8", hex: "#E3D2FE", series: "D系列", isDefault: true },
-      { code: "D9", hex: "#D6BAF5", series: "D系列", isDefault: true },
-      { code: "D10", hex: "#301A49", series: "D系列", isDefault: true },
-      { code: "D11", hex: "#BCBAE2", series: "D系列", isDefault: true },
-      { code: "D12", hex: "#DC99CE", series: "D系列", isDefault: true },
-      { code: "D13", hex: "#B5038F", series: "D系列", isDefault: true },
-      { code: "D14", hex: "#882893", series: "D系列", isDefault: true },
-      { code: "D15", hex: "#2F1E8E", series: "D系列", isDefault: true },
-      { code: "D16", hex: "#E2E4F0", series: "D系列", isDefault: true },
-      { code: "D17", hex: "#C7D3F9", series: "D系列", isDefault: true },
-      { code: "D18", hex: "#9A64B8", series: "D系列", isDefault: true },
-      { code: "D19", hex: "#D8C2D9", series: "D系列", isDefault: true },
-      { code: "D20", hex: "#9C34AD", series: "D系列", isDefault: true },
-      { code: "D21", hex: "#940595", series: "D系列", isDefault: true },
-      { code: "D22", hex: "#383995", series: "D系列", isDefault: true },
-      { code: "D23", hex: "#FADBF8", series: "D系列", isDefault: true },
-      { code: "D24", hex: "#768AE1", series: "D系列", isDefault: true },
-      { code: "D25", hex: "#4950C2", series: "D系列", isDefault: true },
-      { code: "D26", hex: "#D6C6EB", series: "D系列", isDefault: true },
-      { code: "E1", hex: "#F6D4CB", series: "E系列", isDefault: true },
-      { code: "E2", hex: "#FCC1DD", series: "E系列", isDefault: true },
-      { code: "E3", hex: "#F6BDE8", series: "E系列", isDefault: true },
-      { code: "E4", hex: "#E9639E", series: "E系列", isDefault: true },
-      { code: "E5", hex: "#F1559F", series: "E系列", isDefault: true },
-      { code: "E6", hex: "#EC4072", series: "E系列", isDefault: true },
-      { code: "E7", hex: "#C63674", series: "E系列", isDefault: true },
-      { code: "E8", hex: "#FDDBE9", series: "E系列", isDefault: true },
-      { code: "E9", hex: "#E575C7", series: "E系列", isDefault: true },
-      { code: "E10", hex: "#D33997", series: "E系列", isDefault: true },
-      { code: "E11", hex: "#F7DAD4", series: "E系列", isDefault: true },
-      { code: "E12", hex: "#F893BF", series: "E系列", isDefault: true },
-      { code: "E13", hex: "#B5026A", series: "E系列", isDefault: true },
-      { code: "E14", hex: "#FAD4BF", series: "E系列", isDefault: true },
-      { code: "E15", hex: "#F5C9CA", series: "E系列", isDefault: true },
-      { code: "E16", hex: "#FBF4EC", series: "E系列", isDefault: true },
-      { code: "E17", hex: "#F7E3EC", series: "E系列", isDefault: true },
-      { code: "E18", hex: "#FBCBDB", series: "E系列", isDefault: true },
-      { code: "E19", hex: "#F6BBD1", series: "E系列", isDefault: true },
-      { code: "E20", hex: "#D7C6CE", series: "E系列", isDefault: true },
-      { code: "E21", hex: "#C09DA4", series: "E系列", isDefault: true },
-      { code: "E22", hex: "#B58B9F", series: "E系列", isDefault: true },
-      { code: "E23", hex: "#937D8A", series: "E系列", isDefault: true },
-      { code: "E24", hex: "#DEBEE5", series: "E系列", isDefault: true },
-      { code: "F1", hex: "#FF9280", series: "F系列", isDefault: true },
-      { code: "F2", hex: "#F73D48", series: "F系列", isDefault: true },
-      { code: "F3", hex: "#EF4D3E", series: "F系列", isDefault: true },
-      { code: "F4", hex: "#F92B40", series: "F系列", isDefault: true },
-      { code: "F5", hex: "#E30328", series: "F系列", isDefault: true },
-      { code: "F6", hex: "#913635", series: "F系列", isDefault: true },
-      { code: "F7", hex: "#911932", series: "F系列", isDefault: true },
-      { code: "F8", hex: "#BB0126", series: "F系列", isDefault: true },
-      { code: "F9", hex: "#E0677A", series: "F系列", isDefault: true },
-      { code: "F10", hex: "#874628", series: "F系列", isDefault: true },
-      { code: "F11", hex: "#6F321D", series: "F系列", isDefault: true },
-      { code: "F12", hex: "#F8516D", series: "F系列", isDefault: true },
-      { code: "F13", hex: "#F45C45", series: "F系列", isDefault: true },
-      { code: "F14", hex: "#FCADB2", series: "F系列", isDefault: true },
-      { code: "F15", hex: "#D50527", series: "F系列", isDefault: true },
-      { code: "F16", hex: "#F8C0A9", series: "F系列", isDefault: true },
-      { code: "F17", hex: "#E89B7D", series: "F系列", isDefault: true },
-      { code: "F18", hex: "#D07E4A", series: "F系列", isDefault: true },
-      { code: "F19", hex: "#BE454A", series: "F系列", isDefault: true },
-      { code: "F20", hex: "#C69495", series: "F系列", isDefault: true },
-      { code: "F21", hex: "#F2BBC6", series: "F系列", isDefault: true },
-      { code: "F22", hex: "#F7C3D0", series: "F系列", isDefault: true },
-      { code: "F23", hex: "#EC806D", series: "F系列", isDefault: true },
-      { code: "F24", hex: "#E09DAF", series: "F系列", isDefault: true },
-      { code: "F25", hex: "#E84854", series: "F系列", isDefault: true },
-      { code: "G1", hex: "#FFE4D3", series: "G系列", isDefault: true },
-      { code: "G2", hex: "#FCC6AC", series: "G系列", isDefault: true },
-      { code: "G3", hex: "#F1C4A5", series: "G系列", isDefault: true },
-      { code: "G4", hex: "#DCB387", series: "G系列", isDefault: true },
-      { code: "G5", hex: "#E7B34E", series: "G系列", isDefault: true },
-      { code: "G6", hex: "#F3A014", series: "G系列", isDefault: true },
-      { code: "G7", hex: "#98503A", series: "G系列", isDefault: true },
-      { code: "G8", hex: "#4B2B1C", series: "G系列", isDefault: true },
-      { code: "G9", hex: "#E4B685", series: "G系列", isDefault: true },
-      { code: "G10", hex: "#DA8C42", series: "G系列", isDefault: true },
-      { code: "G11", hex: "#DAC898", series: "G系列", isDefault: true },
-      { code: "G12", hex: "#FEC993", series: "G系列", isDefault: true },
-      { code: "G13", hex: "#B2714B", series: "G系列", isDefault: true },
-      { code: "G14", hex: "#8B684C", series: "G系列", isDefault: true },
-      { code: "G15", hex: "#F6F8E3", series: "G系列", isDefault: true },
-      { code: "G16", hex: "#F2D8C1", series: "G系列", isDefault: true },
-      { code: "G17", hex: "#79544E", series: "G系列", isDefault: true },
-      { code: "G18", hex: "#FFE4D6", series: "G系列", isDefault: true },
-      { code: "G19", hex: "#DD7D41", series: "G系列", isDefault: true },
-      { code: "G20", hex: "#A5452F", series: "G系列", isDefault: true },
-      { code: "G21", hex: "#B38561", series: "G系列", isDefault: true },
-      { code: "H1", hex: "#FBFBFB", series: "H系列", isDefault: true },
-      { code: "H2", hex: "#FFFFFF", series: "H系列", isDefault: true },
-      { code: "H3", hex: "#B4B4B4", series: "H系列", isDefault: true },
-      { code: "H4", hex: "#878787", series: "H系列", isDefault: true },
-      { code: "H5", hex: "#464648", series: "H系列", isDefault: true },
-      { code: "H6", hex: "#2C2C2C", series: "H系列", isDefault: true },
-      { code: "H7", hex: "#010101", series: "H系列", isDefault: true },
-      { code: "H8", hex: "#E7D6DC", series: "H系列", isDefault: true },
-      { code: "H9", hex: "#EFEDEE", series: "H系列", isDefault: true },
-      { code: "H10", hex: "#ECEAEB", series: "H系列", isDefault: true },
-      { code: "H11", hex: "#CDCDCD", series: "H系列", isDefault: true },
-      { code: "H12", hex: "#FDF6EE", series: "H系列", isDefault: true },
-      { code: "H13", hex: "#F4EFD1", series: "H系列", isDefault: true },
-      { code: "H14", hex: "#CED7D4", series: "H系列", isDefault: true },
-      { code: "H15", hex: "#98A6A6", series: "H系列", isDefault: true },
-      { code: "H16", hex: "#1B1213", series: "H系列", isDefault: true },
-      { code: "H17", hex: "#F0EEEF", series: "H系列", isDefault: true },
-      { code: "H18", hex: "#FCFFF8", series: "H系列", isDefault: true },
-      { code: "H19", hex: "#F2EEE5", series: "H系列", isDefault: true },
-      { code: "H20", hex: "#96A09F", series: "H系列", isDefault: true },
-      { code: "H21", hex: "#F8FBE6", series: "H系列", isDefault: true },
-      { code: "H22", hex: "#CACADA", series: "H系列", isDefault: true },
-      { code: "H23", hex: "#9B9C94", series: "H系列", isDefault: true },
-      { code: "M1", hex: "#BBC6B6", series: "M系列", isDefault: true },
-      { code: "M2", hex: "#909994", series: "M系列", isDefault: true },
-      { code: "M3", hex: "#697E80", series: "M系列", isDefault: true },
-      { code: "M4", hex: "#E0D4BC", series: "M系列", isDefault: true },
-      { code: "M5", hex: "#D0CBAE", series: "M系列", isDefault: true },
-      { code: "M6", hex: "#B0AA86", series: "M系列", isDefault: true },
-      { code: "M7", hex: "#B0A796", series: "M系列", isDefault: true },
-      { code: "M8", hex: "#AE8082", series: "M系列", isDefault: true },
-      { code: "M9", hex: "#A88764", series: "M系列", isDefault: true },
-      { code: "M10", hex: "#C6B2BB", series: "M系列", isDefault: true },
-      { code: "M11", hex: "#9D7693", series: "M系列", isDefault: true },
-      { code: "M12", hex: "#644B51", series: "M系列", isDefault: true },
-      { code: "M13", hex: "#C79266", series: "M系列", isDefault: true },
-      { code: "M14", hex: "#C37463", series: "M系列", isDefault: true },
-      { code: "M15", hex: "#747D7A", series: "M系列", isDefault: true },
-      { code: "P1", hex: "#F9F9F9", series: "P系列（珠光）", isDefault: false },
-      { code: "P2", hex: "#ABABAB", series: "P系列（珠光）", isDefault: false },
-      { code: "P3", hex: "#B6DBAF", series: "P系列（珠光）", isDefault: false },
-      { code: "P4", hex: "#FEA2A3", series: "P系列（珠光）", isDefault: false },
-      { code: "P5", hex: "#EB903F", series: "P系列（珠光）", isDefault: false },
-      { code: "P6", hex: "#63CEA2", series: "P系列（珠光）", isDefault: false },
-      { code: "P7", hex: "#E79273", series: "P系列（珠光）", isDefault: false },
-      { code: "P8", hex: "#ECDB59", series: "P系列（珠光）", isDefault: false },
-      { code: "P9", hex: "#DBD9DA", series: "P系列（珠光）", isDefault: false },
-      { code: "P10", hex: "#DBC7EA", series: "P系列（珠光）", isDefault: false },
-      { code: "P11", hex: "#F1E9D4", series: "P系列（珠光）", isDefault: false },
-      { code: "P12", hex: "#E9EDEE", series: "P系列（珠光）", isDefault: false },
-      { code: "P13", hex: "#ADCBF1", series: "P系列（珠光）", isDefault: false },
-      { code: "P14", hex: "#337BAD", series: "P系列（珠光）", isDefault: false },
-      { code: "P15", hex: "#668575", series: "P系列（珠光）", isDefault: false },
-      { code: "P16", hex: "#FDC24E", series: "P系列（珠光）", isDefault: false },
-      { code: "P17", hex: "#FDA42E", series: "P系列（珠光）", isDefault: false },
-      { code: "P18", hex: "#FEBDA7", series: "P系列（珠光）", isDefault: false },
-      { code: "P19", hex: "#FFDEE9", series: "P系列（珠光）", isDefault: false },
-      { code: "P20", hex: "#FCBFD1", series: "P系列（珠光）", isDefault: false },
-      { code: "P21", hex: "#E8BEC2", series: "P系列（珠光）", isDefault: false },
-      { code: "P22", hex: "#DFAAA4", series: "P系列（珠光）", isDefault: false },
-      { code: "P23", hex: "#A3656A", series: "P系列（珠光）", isDefault: false },
-      { code: "Q1", hex: "#F2A5E8", series: "Q系列（温变）", isDefault: false },
-      { code: "Q2", hex: "#E9EC91", series: "Q系列（温变）", isDefault: false },
-      { code: "Q3", hex: "#FFFF00", series: "Q系列（温变）", isDefault: false },
-      { code: "Q4", hex: "#FFEBFA", series: "Q系列（温变）", isDefault: false },
-      { code: "Q5", hex: "#76CEDE", series: "Q系列（温变）", isDefault: false },
-      { code: "R1", hex: "#D40E1F", series: "R系列（果冻）", isDefault: false },
-      { code: "R2", hex: "#F13484", series: "R系列（果冻）", isDefault: false },
-      { code: "R3", hex: "#FB852B", series: "R系列（果冻）", isDefault: false },
-      { code: "R4", hex: "#F8ED33", series: "R系列（果冻）", isDefault: false },
-      { code: "R5", hex: "#32C958", series: "R系列（果冻）", isDefault: false },
-      { code: "R6", hex: "#1EBA93", series: "R系列（果冻）", isDefault: false },
-      { code: "R7", hex: "#1D779C", series: "R系列（果冻）", isDefault: false },
-      { code: "R8", hex: "#1960C8", series: "R系列（果冻）", isDefault: false },
-      { code: "R9", hex: "#945AB1", series: "R系列（果冻）", isDefault: false },
-      { code: "R10", hex: "#F8DA54", series: "R系列（果冻）", isDefault: false },
-      { code: "R11", hex: "#FCECF7", series: "R系列（果冻）", isDefault: false },
-      { code: "R12", hex: "#D8D4D3", series: "R系列（果冻）", isDefault: false },
-      { code: "R13", hex: "#56534E", series: "R系列（果冻）", isDefault: false },
-      { code: "R14", hex: "#A3E7DC", series: "R系列（果冻）", isDefault: false },
-      { code: "R15", hex: "#78CEE7", series: "R系列（果冻）", isDefault: false },
-      { code: "R16", hex: "#3FCDCE", series: "R系列（果冻）", isDefault: false },
-      { code: "R17", hex: "#4E8379", series: "R系列（果冻）", isDefault: false },
-      { code: "R18", hex: "#7DCA9C", series: "R系列（果冻）", isDefault: false },
-      { code: "R19", hex: "#C8E664", series: "R系列（果冻）", isDefault: false },
-      { code: "R20", hex: "#E3CCBA", series: "R系列（果冻）", isDefault: false },
-      { code: "R21", hex: "#A17140", series: "R系列（果冻）", isDefault: false },
-      { code: "R22", hex: "#6B372C", series: "R系列（果冻）", isDefault: false },
-      { code: "R23", hex: "#F6BB6F", series: "R系列（果冻）", isDefault: false },
-      { code: "R24", hex: "#F3C6C0", series: "R系列（果冻）", isDefault: false },
-      { code: "R25", hex: "#C76A62", series: "R系列（果冻）", isDefault: false },
-      { code: "R26", hex: "#D093BC", series: "R系列（果冻）", isDefault: false },
-      { code: "R27", hex: "#E58EAE", series: "R系列（果冻）", isDefault: false },
-      { code: "R28", hex: "#9F85CF", series: "R系列（果冻）", isDefault: false },
-      { code: "T1", hex: "#FCFDFF", series: "T系列（透明）", isDefault: false },
-      { code: "Y1", hex: "#FF6FB7", series: "Y系列（夜光）", isDefault: false },
-      { code: "Y2", hex: "#FDB583", series: "Y系列（夜光）", isDefault: false },
-      { code: "Y3", hex: "#D8FCA4", series: "Y系列（夜光）", isDefault: false },
-      { code: "Y4", hex: "#91DAFB", series: "Y系列（夜光）", isDefault: false },
-      { code: "Y5", hex: "#E987EA", series: "Y系列（夜光）", isDefault: false },
-      { code: "Y6", hex: "#F7D4B8", series: "Y系列（夜光）", isDefault: false },
-      { code: "Y7", hex: "#F1FA7D", series: "Y系列（夜光）", isDefault: false },
-      { code: "Y8", hex: "#5EE88C", series: "Y系列（夜光）", isDefault: false },
-      { code: "Y9", hex: "#F8F5FE", series: "Y系列（夜光）", isDefault: false },
-    ];
-    const MASTER_CODES = MASTER_PALETTE.map(x=>x.code);
-    const MASTER_HEX = Object.fromEntries(MASTER_PALETTE.map(x=>[x.code,x.hex]));
-    const MASTER_SERIES = Object.fromEntries(MASTER_PALETTE.map(x=>[x.code,x.series]));
-    const MASTER_IS_DEFAULT = Object.fromEntries(MASTER_PALETTE.map(x=>[x.code,!!x.isDefault]));
-    const DEFAULT_CODES = MASTER_PALETTE.filter(x=>x.isDefault).map(x=>x.code);
-    const NON_DEFAULT_SERIES = Array.from(new Set(MASTER_PALETTE.filter(x=>!x.isDefault).map(x=>x.series)));
-    const SERIES_ORDER = Array.from(new Set(MASTER_PALETTE.map(x=>x.series)));
+    let MASTER_PALETTE = [];
+    let MASTER_CODES = [];
+    let MASTER_HEX = {};
+    let MASTER_SERIES = {};
+    let MASTER_IS_DEFAULT = {};
+    let DEFAULT_CODES = [];
+    let NON_DEFAULT_SERIES = [];
+    let SERIES_ORDER = [];
+
+    function setMasterPalette(palette){
+      const list = Array.isArray(palette) ? palette : [];
+      MASTER_PALETTE = list;
+      MASTER_CODES = [];
+      MASTER_HEX = {};
+      MASTER_SERIES = {};
+      MASTER_IS_DEFAULT = {};
+      DEFAULT_CODES = [];
+      NON_DEFAULT_SERIES = [];
+      SERIES_ORDER = [];
+      const seriesSet = new Set();
+      const nonDefaultSeriesSet = new Set();
+      list.forEach((raw)=>{
+        const code = String(raw?.code || "").trim().toUpperCase();
+        if(!code) return;
+        const hex = String(raw?.hex || "#777777");
+        const series = String(raw?.series || "");
+        const isDefault = !!raw?.isDefault;
+        MASTER_CODES.push(code);
+        MASTER_HEX[code] = hex;
+        MASTER_SERIES[code] = series;
+        MASTER_IS_DEFAULT[code] = isDefault;
+        if(isDefault) DEFAULT_CODES.push(code);
+        if(series) seriesSet.add(series);
+        if(!isDefault && series) nonDefaultSeriesSet.add(series);
+      });
+      SERIES_ORDER = Array.from(seriesSet);
+      NON_DEFAULT_SERIES = Array.from(nonDefaultSeriesSet);
+    }
 
     let AUTH_TOKEN = (()=>{ try{ return localStorage.getItem(TOKEN_KEY) || ""; }catch{ return ""; } })();
     let IS_LOGGED_IN = false;
@@ -464,31 +206,35 @@ CRITICAL_THRESHOLD = Number(data.critical ?? 300) || 300;
       return false;
     }
 
-    async function initGuestDefaults(){
-      // 已有本地数据则不覆盖
-      if(loadGuest()) return;
-
-      // 优先从后端拿 palette（含hex）；失败则用内置221色号（hex用灰色占位）
-      let palette = null;
+    async function loadMasterPalette(){
       try{
         const r = await fetch(apiUrl("/api/public/palette"));
         if(r.ok){
           const j = await r.json();
-          palette = Array.isArray(j.data) ? j.data : null;
+          const palette = Array.isArray(j.data) ? j.data : [];
+          setMasterPalette(palette);
+          return palette.length > 0;
         }
-      }catch{ palette = null; }
+      }catch{}
+      setMasterPalette([]);
+      return false;
+    }
+
+    async function initGuestDefaults(){
+      // 已有本地数据则不覆盖
+      if(loadGuest()) return;
+
+      if(MASTER_PALETTE.length===0){
+        const ok = await loadMasterPalette();
+        if(!ok){
+          toast("色号列表加载失败，请检查服务端是否可用","error");
+        }
+      }
 
       COLORS = {};
       INVENTORY = {};
 
-      if(palette && palette.length>0){
-        palette.forEach(x=>{
-          const c = String(x.code||"").trim().toUpperCase();
-          if(!c) return;
-          COLORS[c] = String(x.hex||"#777777");
-          INVENTORY[c] = 1000;
-        });
-      } else {
+      if(MASTER_CODES.length>0){
         MASTER_CODES.forEach(c=>{
           COLORS[c] = MASTER_HEX[c] || "#777777";
           INVENTORY[c] = 1000;
@@ -4547,6 +4293,7 @@ const criticalInput=document.getElementById("criticalInput");
 
     
     async function bootstrap(){
+      await loadMasterPalette();
       setAuthUI();
       bindSortAndViewToggles();
       initAppNavigation();
