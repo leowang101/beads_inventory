@@ -2973,7 +2973,7 @@ body.theme-light #recordsDialog .stats-card{
     }
     @media (max-width: 720px){
       .app-main{
-        padding:10px 14px calc(var(--tabbar-height) + 20px + env(safe-area-inset-bottom));
+        padding:14px 14px calc(var(--tabbar-height) + 20px + env(safe-area-inset-bottom));
       }
     }
 

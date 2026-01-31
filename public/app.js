@@ -73,7 +73,11 @@ const API_BASE = window.location.origin;
         try{ setRecordsTab(RECORDS_STATE.active); }catch{}
       }
       if(target === "works"){
-        try{ loadAndRenderWorks(); }catch{}
+        if(APP_READY){
+          try{ loadAndRenderWorks(); }catch{}
+        }else{
+          WORKS_STATE.deferLoad = true;
+        }
       }
     }
 
@@ -190,6 +194,7 @@ const API_BASE = window.location.origin;
 
     let AUTH_TOKEN = (()=>{ try{ return localStorage.getItem(TOKEN_KEY) || ""; }catch{ return ""; } })();
     let IS_LOGGED_IN = false;
+    let APP_READY = false;
     let USERNAME = "";
 
     // guest history: {gid, code, ts, type, qty, pattern, patternCategoryId, source}
@@ -3355,7 +3360,8 @@ const criticalInput=document.getElementById("criticalInput");
       loading: false,
       requestSeq: 0,
       cacheKey: "",
-      list: []
+      list: [],
+      deferLoad: false
     };
     const WORK_PUBLISHED_GIDS = new Set();
     const WORK_STATE = {
@@ -4425,7 +4431,7 @@ const criticalInput=document.getElementById("criticalInput");
     async function fetchWorksPage({reset}){
       if(!worksList || !worksEmpty) return;
       if(!IS_LOGGED_IN){
-        toast("请登录后查看作品","warn");
+        if(APP_READY) toast("请登录后查看作品","warn");
         return;
       }
       const categoryParam = WORKS_STATE.categoryId ? String(WORKS_STATE.categoryId) : "";
@@ -4537,7 +4543,7 @@ const criticalInput=document.getElementById("criticalInput");
 
     async function loadAndRenderWorks(){
       if(!IS_LOGGED_IN){
-        toast("请登录后查看作品","warn");
+        if(APP_READY) toast("请登录后查看作品","warn");
         return;
       }
       renderWorksCategoryTabs();
@@ -5405,6 +5411,11 @@ if(btnLogout) btnLogout.addEventListener("click", async ()=>{
         }else{
           toast("无法连接云端 API，请检查服务是否运行","error");
         }
+      }
+      APP_READY = true;
+      if(WORKS_STATE.deferLoad && document.body.dataset.page === "works"){
+        WORKS_STATE.deferLoad = false;
+        loadAndRenderWorks();
       }
 
       maybeShowGuestTip();
