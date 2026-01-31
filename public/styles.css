@@ -1734,7 +1734,7 @@ body.theme-light #recordsDialog .records-restock .record-thumb::after{
 #recordsDialog .record-meta-item{
   display:flex;
   align-items:center;
-  gap:6px;
+  gap:2px;
   white-space:nowrap;
 }
 #recordsDialog .record-meta-line .meta-icon{
@@ -1757,7 +1757,7 @@ body.theme-light #recordsDialog .records-restock .record-thumb::after{
 #recordsDialog .record-time{
   display:flex;
   align-items:center;
-  gap:6px;
+  gap:2px;
   white-space:nowrap;
 }
 #recordsDialog .record-time .dt-date{white-space:nowrap;}
