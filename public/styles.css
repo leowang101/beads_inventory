@@ -1067,6 +1067,16 @@ body.theme-light .work-upload-illus{
   border-radius: var(--radius-sm);
   overflow:hidden;
   background: rgba(0,0,0,.04);
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+.work-cropper-stage .cropper-container,
+.work-cropper-stage .cropper-canvas,
+.work-cropper-stage .cropper-drag-box,
+.work-cropper-stage .cropper-crop-box,
+.work-cropper-stage .cropper-view-box{
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 .work-cropper-stage img{
   display:block;

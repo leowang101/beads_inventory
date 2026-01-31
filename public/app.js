@@ -3528,6 +3528,15 @@ const criticalInput=document.getElementById("criticalInput");
             ready(){
               const cropper = WORK_STATE.cropper;
               if(cropper && workCropperZoom){
+                const container = cropper.getContainerData();
+                if(container && Number.isFinite(container.width) && Number.isFinite(container.height)){
+                  const size = Math.min(container.width, container.height);
+                  const left = (container.width - size) / 2;
+                  const top = (container.height - size) / 2;
+                  try{
+                    cropper.setCropBoxData({ left, top, width: size, height: size });
+                  }catch{}
+                }
                 const imageData = cropper.getImageData();
                 const cropBox = cropper.getCropBoxData();
                 let ratio = imageData?.ratio;
