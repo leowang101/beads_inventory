@@ -4026,7 +4026,7 @@ const criticalInput=document.getElementById("criticalInput");
           : (type==="todo" ? "编辑待拼图纸" : "编辑补充记录");
       }
       if(recordEditDelete){
-        recordEditDelete.textContent = type==="todo" ? "删除待拼" : "删除记录";
+        recordEditDelete.textContent = "删除记录";
         recordEditDelete.style.display = "";
       }
       if(recordEditPatternField) recordEditPatternField.style.display = isConsumeLike ? "" : "none";
