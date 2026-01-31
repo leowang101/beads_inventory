@@ -711,7 +711,6 @@ main{
       border-radius:999px;
       padding:6px 10px;
     }
-    #recordEditDelete{display:none;}
     .modal-body{
       padding:14px 16px 16px;
       display:flex; flex-direction:column; gap:12px;

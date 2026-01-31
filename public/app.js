@@ -4027,7 +4027,7 @@ const criticalInput=document.getElementById("criticalInput");
       }
       if(recordEditDelete){
         recordEditDelete.textContent = "删除记录";
-        recordEditDelete.style.display = "";
+        recordEditDelete.style.display = "inline-flex";
       }
       if(recordEditPatternField) recordEditPatternField.style.display = isConsumeLike ? "" : "none";
       if(recordEditCategoryField) recordEditCategoryField.style.display = isConsumeLike ? "" : "none";
