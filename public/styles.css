@@ -3063,7 +3063,7 @@ body.theme-light #recordsDialog .stats-card{
       --accent-2:#f97316;
       --warn:#f59e0b;
       --ok:#22c55e;
-      --tabbar-height:60px;
+      --tabbar-height:64px;
     }
 
     body.theme-light{
@@ -3285,12 +3285,11 @@ body.theme-light #recordsDialog .stats-card{
       height: var(--tabbar-height);
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
-      padding: 6px 14px calc(8px + env(safe-area-inset-bottom));
+      padding: 8px 16px calc(10px + env(safe-area-inset-bottom));
       background: rgba(10,14,18,.82);
       border-top: 1px solid var(--border);
       backdrop-filter: blur(16px);
       z-index: 8995;
-      overflow: visible;
 }
     body.theme-light .tabbar{ background: rgba(255,255,255,.86); }
 
@@ -3301,12 +3300,11 @@ body.theme-light #recordsDialog .stats-card{
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:1px;
-      font-size:10px;
-      padding:2px 0;
+      gap:4px;
+      font-size:11px;
+      padding:6px 0;
       position:relative;
-      min-height: 36px;
-      justify-content:center;
+      min-height: 40px;
 }
     .tabbar-btn:hover,
     .tabbar-btn:active{
@@ -3314,25 +3312,26 @@ body.theme-light #recordsDialog .stats-card{
       border-color: transparent;
     }
 .tabbar-btn svg{
-      width:28px;
-      height:28px;
+      width:22px;
+      height:22px;
       stroke: currentColor;
       fill: none;
-      stroke-width: 1;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      flex-shrink:0;
-      display:block;
+      stroke-width: 1.8;
 }
 .tab-label{
       line-height:1.1;
 }
 .tabbar-btn.active{
-      color: var(--accent);
+      color: var(--text);
 }
 .tabbar-btn.active .tab-label{ font-weight:700; }
 .tabbar-btn.active::before{
-      display:none;
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:14px;
+      background: rgba(34,211,238,.14);
+      z-index:-1;
 }
 
     .btn-primary{
