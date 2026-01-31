@@ -3309,9 +3309,12 @@ const criticalInput=document.getElementById("criticalInput");
     const workDetailClose = document.getElementById("workDetailClose");
     const workDetailEdit = document.getElementById("workDetailEdit");
     const workDetailShare = document.getElementById("workDetailShare");
+    const workDetailImageWrap = document.getElementById("workDetailImageWrap");
     const workDetailImage = document.getElementById("workDetailImage");
     const workDetailTitle = document.getElementById("workDetailTitle");
-    const workDetailMeta = document.getElementById("workDetailMeta");
+    const workDetailStats = document.getElementById("workDetailStats");
+    const workDetailTime = document.getElementById("workDetailTime");
+    const workDetailTag = document.getElementById("workDetailTag");
     const workDetailNotes = document.getElementById("workDetailNotes");
 
 
@@ -3632,8 +3635,8 @@ const criticalInput=document.getElementById("criticalInput");
         toast("完成时长至少 1 分钟","warn");
         return;
       }
-      if(durationInfo.totalMinutes > 240 * 60){
-        toast("完成时长不能超过 240 小时","warn");
+      if(durationInfo.totalMinutes > 100 * 60 + 60){
+        toast("完成时长不能超过 100 小时","warn");
         return;
       }
       WORK_STATE.busy = true;
@@ -3716,7 +3719,7 @@ const criticalInput=document.getElementById("criticalInput");
     }
 
     function normalizeDurationInputs(){
-      const hRaw = clampNumber(workDurationHours?.value, 0, 240);
+      const hRaw = clampNumber(workDurationHours?.value, 0, 100);
       const mRaw = clampNumber(workDurationMinutes?.value, 0, 60);
       if(workDurationHours && hRaw !== null) workDurationHours.value = String(hRaw);
       if(workDurationMinutes && mRaw !== null) workDurationMinutes.value = String(mRaw);
@@ -3725,7 +3728,7 @@ const criticalInput=document.getElementById("criticalInput");
       let hours = hRaw === null ? 0 : hRaw;
       let minutes = mRaw === null ? 0 : mRaw;
       if(minutes === 60){
-        if(hours < 240){
+        if(hours < 100){
           hours += 1;
           minutes = 0;
           if(workDurationHours) workDurationHours.value = String(hours);
@@ -4503,13 +4506,27 @@ const criticalInput=document.getElementById("criticalInput");
       if(!worksList || !worksEmpty) return;
       worksList.innerHTML = "";
       const list = Array.isArray(items) ? items : [];
+      const hasFilter = !!WORKS_STATE.categoryId;
       worksList.classList.toggle("is-dual", list.length > 0 && list.length <= 2);
       if(list.length === 0){
-        worksEmpty.style.display = "block";
-        if(worksStats) worksStats.style.display = "none";
-        if(worksCategoryBar) worksCategoryBar.style.display = "none";
+        if(hasFilter){
+          worksList.classList.add("is-empty");
+          worksEmpty.style.display = "none";
+          if(worksStats) worksStats.style.display = "";
+          if(worksCategoryBar) worksCategoryBar.style.display = "";
+          const empty = document.createElement("div");
+          empty.className = "works-list-empty";
+          empty.innerHTML = `<div class="empty-illus"></div><div class="empty-text">暂无作品</div>`;
+          worksList.appendChild(empty);
+        }else{
+          worksList.classList.remove("is-empty");
+          worksEmpty.style.display = "block";
+          if(worksStats) worksStats.style.display = "none";
+          if(worksCategoryBar) worksCategoryBar.style.display = "none";
+        }
         return;
       }
+      worksList.classList.remove("is-empty");
       worksEmpty.style.display = "none";
       if(worksStats) worksStats.style.display = "";
       if(worksCategoryBar) worksCategoryBar.style.display = "";
@@ -4568,22 +4585,35 @@ const criticalInput=document.getElementById("criticalInput");
       const duration = formatWorkDuration(item);
       const note = (item?.note || "").trim();
 
+      if(workDetailImageWrap) workDetailImageWrap.classList.remove("is-loaded");
       if(workDetailImage) workDetailImage.src = String(item?.imageUrl || item?.image_url || "");
       if(workDetailTitle) workDetailTitle.textContent = pattern;
-      if(workDetailMeta){
-        workDetailMeta.innerHTML = "";
-        const rows = [
-          {label:"图纸分类", value: catName || "未分类"},
-          {label:"完成时间", value: finishedAt || "—"},
-          {label:"拼豆数量", value: total},
-          {label:"拼豆时长", value: duration}
+      if(workDetailTag){
+        if(catName){
+          workDetailTag.textContent = catName;
+          workDetailTag.style.display = "";
+        }else{
+          workDetailTag.textContent = "";
+          workDetailTag.style.display = "none";
+        }
+      }
+      if(workDetailStats){
+        workDetailStats.innerHTML = "";
+        const items = [
+          {label:"拼豆时长", value: duration || "—"},
+          {label:"拼豆数量", value: total}
         ];
-        rows.forEach(r=>{
+        items.forEach(r=>{
           const div = document.createElement("div");
-          div.className = "meta-item";
-          div.innerHTML = `<span>${escapeHtml(r.label)}：</span><strong>${escapeHtml(r.value)}</strong>`;
-          workDetailMeta.appendChild(div);
+          div.className = "work-detail-stat";
+          div.innerHTML = `<span>${escapeHtml(r.label)}</span><strong>${escapeHtml(r.value)}</strong>`;
+          workDetailStats.appendChild(div);
         });
+      }
+      if(workDetailTime){
+        workDetailTime.innerHTML = "";
+        const timeText = finishedAt || "—";
+        workDetailTime.innerHTML = `<span>完成时间</span><strong>${escapeHtml(timeText)}</strong>`;
       }
       if(workDetailNotes){
         workDetailNotes.textContent = note || "暂无备注";
@@ -5156,6 +5186,16 @@ const criticalInput=document.getElementById("criticalInput");
         if(workDetailDialog && workDetailDialog.open) closeDialog(workDetailDialog);
         if(WORK_STATE.editItem) openWorkEdit(WORK_STATE.editItem);
       });
+    }
+    if(workDetailImage && !workDetailImage.__hooked){
+      const wrap = workDetailImageWrap || workDetailImage.closest(".work-detail-image");
+      const setLoaded = (val)=>{
+        if(!wrap) return;
+        wrap.classList.toggle("is-loaded", !!val);
+      };
+      workDetailImage.addEventListener("load", ()=> setLoaded(true));
+      workDetailImage.addEventListener("error", ()=> setLoaded(false));
+      workDetailImage.__hooked = true;
     }
     if(worksEmptyAction){
       worksEmptyAction.addEventListener("click", ()=>{

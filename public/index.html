@@ -720,7 +720,7 @@
           <label for="workDuration">完成时长</label>
           <div class="work-duration-inputs" id="workDuration">
             <div class="duration-field">
-              <input id="workDurationHours" type="number" min="0" max="240" step="1" inputmode="numeric" placeholder="0" />
+              <input id="workDurationHours" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="0" />
               <span class="duration-unit">小时</span>
             </div>
             <div class="duration-field">
@@ -768,17 +768,24 @@
     <div class="modal-head">
       <h3>作品详情</h3>
       <div class="modal-head-actions">
-        <button id="workDetailEdit" class="btn-ghost" type="button">编辑</button>
         <button id="workDetailShare" class="btn-secondary" type="button">分享</button>
+        <button id="workDetailEdit" class="btn-ghost" type="button">编辑</button>
         <button id="workDetailClose" type="button">关闭</button>
       </div>
     </div>
     <div class="modal-body">
-      <div class="work-detail-image">
+      <div class="work-detail-image" id="workDetailImageWrap">
+        <div class="work-detail-placeholder">
+          <div class="empty-illus"></div>
+        </div>
         <img id="workDetailImage" alt="作品成品图" />
       </div>
-      <div class="work-detail-title" id="workDetailTitle"></div>
-      <div class="work-detail-meta" id="workDetailMeta"></div>
+      <div class="work-detail-head">
+        <div class="work-detail-title" id="workDetailTitle"></div>
+        <div class="pattern-tag" id="workDetailTag" style="display:none;"></div>
+      </div>
+      <div class="work-detail-stats" id="workDetailStats"></div>
+      <div class="work-detail-time" id="workDetailTime"></div>
       <div class="work-detail-notes" id="workDetailNotes"></div>
     </div>
   </dialog>
