@@ -3995,17 +3995,18 @@ const criticalInput=document.getElementById("criticalInput");
 
         const actions = document.createElement("div");
         actions.className="record-actions";
-        const btnPublish = document.createElement("button");
-        btnPublish.type="button";
-        btnPublish.className="link-action publish-btn";
-        const published = !!(g?.workId || g?.workPublished || g?.published) || WORK_PUBLISHED_GIDS.has(gid);
-        setPublishButtonState(btnPublish, published);
-        btnPublish.addEventListener("click", ()=>{
-          if(btnPublish.disabled) return;
-          openWorkDialog(gid, btnPublish);
-        });
+        // 发布作品按钮暂时停用：不展示，避免用户点击
+        // const btnPublish = document.createElement("button");
+        // btnPublish.type="button";
+        // btnPublish.className="link-action publish-btn";
+        // const published = !!(g?.workId || g?.workPublished || g?.published) || WORK_PUBLISHED_GIDS.has(gid);
+        // setPublishButtonState(btnPublish, published);
+        // btnPublish.addEventListener("click", ()=>{
+        //   if(btnPublish.disabled) return;
+        //   openWorkDialog(gid, btnPublish);
+        // });
         actions.appendChild(btnEdit);
-        actions.appendChild(btnPublish);
+        // actions.appendChild(btnPublish);
         actions.appendChild(btnToggle);
 
           if(patternCategoryId){
