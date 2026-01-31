@@ -1757,10 +1757,15 @@ body.theme-light #worksStats .stats-card{
   margin-top:24px;
 }
 .works-grid{
+  -webkit-column-count:2;
   column-count:2;
+  -webkit-column-gap:12px;
   column-gap:12px;
+  -webkit-column-fill: balance;
+  column-fill: balance;
 }
 .work-card{
+  -webkit-column-break-inside: avoid;
   break-inside: avoid;
   margin-bottom:12px;
   border-radius: var(--radius-md);
