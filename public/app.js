@@ -4502,13 +4502,40 @@ const criticalInput=document.getElementById("criticalInput");
       }
     }
 
+    let worksMasonryRaf = null;
+    function scheduleWorksMasonry(){
+      if(!worksList) return;
+      if(worksList.classList.contains("is-empty")) return;
+      if(worksMasonryRaf) cancelAnimationFrame(worksMasonryRaf);
+      worksMasonryRaf = requestAnimationFrame(()=>{
+        worksMasonryRaf = null;
+        layoutWorksMasonry();
+      });
+    }
+
+    function layoutWorksMasonry(){
+      if(!worksList) return;
+      if(worksList.classList.contains("is-empty")) return;
+      const rowHeight = 8;
+      const styles = getComputedStyle(worksList);
+      const gap = parseFloat(styles.rowGap || styles.gap || "0") || 0;
+      const cards = worksList.querySelectorAll(".work-card");
+      cards.forEach(card=>{
+        card.style.gridRowEnd = "auto";
+      });
+      cards.forEach(card=>{
+        const height = card.getBoundingClientRect().height;
+        const span = Math.max(1, Math.ceil((height + gap) / (rowHeight + gap)));
+        card.style.gridRowEnd = `span ${span}`;
+      });
+    }
+
     function renderWorksList(items){
       if(!worksList || !worksEmpty) return;
       worksList.innerHTML = "";
       const list = Array.isArray(items) ? items : [];
       const hasFilter = !!WORKS_STATE.categoryId;
       const hasCategories = (PATTERN_CATEGORIES || []).length > 0;
-      worksList.classList.toggle("is-dual", list.length > 0 && list.length <= 2);
       if(list.length === 0){
         if(hasFilter){
           worksList.classList.add("is-empty");
@@ -4542,13 +4569,18 @@ const criticalInput=document.getElementById("criticalInput");
         const img = document.createElement("img");
         img.src = String(item.imageUrl || item.image_url || "");
         img.alt = String(item.pattern || "作品");
+        img.addEventListener("load", scheduleWorksMasonry);
+        img.addEventListener("error", scheduleWorksMasonry);
         card.appendChild(img);
 
         const body = document.createElement("div");
         body.className = "work-card-body";
+        const head = document.createElement("div");
+        head.className = "work-card-head";
         const title = document.createElement("div");
         title.className = "work-card-title";
         title.textContent = item.pattern || "未命名图纸";
+        head.appendChild(title);
         const meta = document.createElement("div");
         meta.className = "work-card-meta";
         const time = document.createElement("div");
@@ -4560,12 +4592,21 @@ const criticalInput=document.getElementById("criticalInput");
         total.innerHTML = `<span class="meta-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3.5"></circle></svg></span><span>${escapeHtml(formatNumber(item.total || 0))}</span>`;
         meta.appendChild(time);
         meta.appendChild(total);
-        body.appendChild(title);
+        body.appendChild(head);
         body.appendChild(meta);
+
+        const catName = item?.patternCategoryId ? getPatternCategoryNameById(item.patternCategoryId) : "";
+        if(catName){
+          const tag = document.createElement("div");
+          tag.className = "pattern-tag work-card-tag";
+          tag.textContent = catName;
+          card.appendChild(tag);
+        }
         card.appendChild(body);
         card.addEventListener("click", ()=>openWorkDetail(item));
         worksList.appendChild(card);
       });
+      scheduleWorksMasonry();
     }
 
     async function loadAndRenderWorks(){
@@ -5286,6 +5327,7 @@ const criticalInput=document.getElementById("criticalInput");
     }
     window.addEventListener("scroll", onScrollOrResize, {passive:true});
     window.addEventListener("resize", onScrollOrResize);
+    window.addEventListener("resize", scheduleWorksMasonry);
 
     // 初始化
 
