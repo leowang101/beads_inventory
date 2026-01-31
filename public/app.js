@@ -3654,7 +3654,7 @@ const criticalInput=document.getElementById("criticalInput");
           if(h > 0) return `${h}小时`;
           return `${m}分钟`;
         })();
-        const noteValue = (workNoteInput?.value || "").trim().slice(0, 256) || null;
+        const noteValue = (workNoteInput?.value || "").trim().slice(0, 50) || null;
         const finishedAt = (workFinishedAtInput?.value || "").trim() || null;
         if(isEdit){
           const payload = {
@@ -4507,13 +4507,14 @@ const criticalInput=document.getElementById("criticalInput");
       worksList.innerHTML = "";
       const list = Array.isArray(items) ? items : [];
       const hasFilter = !!WORKS_STATE.categoryId;
+      const hasCategories = (PATTERN_CATEGORIES || []).length > 0;
       worksList.classList.toggle("is-dual", list.length > 0 && list.length <= 2);
       if(list.length === 0){
         if(hasFilter){
           worksList.classList.add("is-empty");
           worksEmpty.style.display = "none";
           if(worksStats) worksStats.style.display = "";
-          if(worksCategoryBar) worksCategoryBar.style.display = "";
+          if(worksCategoryBar) worksCategoryBar.style.display = hasCategories ? "" : "none";
           const empty = document.createElement("div");
           empty.className = "works-list-empty";
           empty.innerHTML = `<div class="empty-illus"></div><div class="empty-text">暂无作品</div>`;
@@ -4529,7 +4530,7 @@ const criticalInput=document.getElementById("criticalInput");
       worksList.classList.remove("is-empty");
       worksEmpty.style.display = "none";
       if(worksStats) worksStats.style.display = "";
-      if(worksCategoryBar) worksCategoryBar.style.display = "";
+      if(worksCategoryBar) worksCategoryBar.style.display = hasCategories ? "" : "none";
 
       list.forEach(item=>{
         const card = document.createElement("div");

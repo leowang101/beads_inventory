@@ -795,12 +795,15 @@ main{
       transition:.18s ease;
     }
 
-    .category-tabs{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      margin:4px 0;
-    }
+.category-tabs{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:4px 0;
+}
+.category-tabs:empty{
+  display:none;
+}
     .category-scroll{
       display:flex;
       gap:6px;
@@ -1945,6 +1948,19 @@ body.theme-light #worksStats .stats-card{
   .work-detail-meta{ grid-template-columns: 1fr; }
 }
 @supports (-webkit-touch-callout: none){
+  .works-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:16px;
+    -webkit-column-count: initial;
+    column-count: initial;
+    -webkit-column-gap: 0;
+    column-gap: 0;
+  }
+  .work-card{
+    width: calc(50% - 8px);
+    margin-bottom:0;
+  }
   .work-card{
     box-shadow: none;
   }
