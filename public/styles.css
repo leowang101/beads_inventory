@@ -269,17 +269,21 @@ body.theme-light .float-nav .icon-btn{
 }
 .sort-group::-webkit-scrollbar{ display:none; }
 .btn-sort{
-  padding:10px 12px;
-  border-radius:12px;
+  padding:6px 12px;
+  border-radius:999px;
   border:1px solid var(--border);
-  background: transparent;
+  background: var(--panel-2);
+  color: var(--muted);
   cursor:pointer;
   white-space:nowrap;
   margin:2px 0px 0px 0px;
+  font-size:11px;
+  transition:.15s ease;
 }
 .btn-sort.active{
-  background: rgba(34,197,94,.15);
+  color:var(--text);
   border-color: rgba(34,197,94,.35);
+  background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(34,197,94,.05));
   margin:2px 0px 0px 0px;
 }
 
@@ -809,8 +813,8 @@ main{
     }
     .category-chip.active{
       color:var(--text);
-      border-color: rgba(125,211,252,.35);
-      background: linear-gradient(135deg, rgba(125,211,252,.18), rgba(125,211,252,.05));
+      border-color: rgba(34,197,94,.35);
+      background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(34,197,94,.05));
     }
     .category-chip:hover{ transform: translateY(-1px); }
 
@@ -2262,6 +2266,22 @@ body.theme-light #recordsDialog .stats-card{
   font-weight:600;
   font-variant-numeric:tabular-nums;
   color:var(--text);
+}
+#recordsDialog .stats-filter{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin:6px 0 8px;
+}
+#recordsDialog .stats-filter .category-chip{
+  padding:6px 12px;
+  font-size:11px;
+}
+#recordsDialog .stats-filter .category-chip.active,
+#recordsDialog .stats-filter .category-chip[aria-pressed="true"]{
+  color:var(--text);
+  border-color: rgba(34,197,94,.35);
+  background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(34,197,94,.05));
 }
 #recordsDialog .stats-table{margin-top:4px;}
 #recordsDialog .stats-row{

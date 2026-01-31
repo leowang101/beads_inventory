@@ -43,8 +43,8 @@
             <label>库存排序</label>
             <div class="sort-row">
               <div class="sort-group">
-                <button class="btn-sort" id="btnSortAsc">由少到多</button>
-                <button class="btn-sort" id="btnSortDesc">由多到少</button>
+                <button class="category-chip btn-sort" id="btnSortAsc">由少到多</button>
+                <button class="category-chip btn-sort" id="btnSortDesc">由多到少</button>
               </div>
 
             </div>
@@ -395,6 +395,11 @@
                 <div class="stats-card-value" id="recordsStatsRestockCount">0</div>
               </div>
             </div>
+            <div class="stats-filter" id="recordsStatsFilter">
+              <button type="button" class="category-chip active" data-days="0" aria-pressed="true">全部</button>
+              <button type="button" class="category-chip" data-days="7" aria-pressed="false">近7天</button>
+              <button type="button" class="category-chip" data-days="30" aria-pressed="false">近30天</button>
+            </div>
             <div class="stats-table">
               <div class="stats-row stats-head">
                 <div>排名</div>
@@ -403,7 +408,10 @@
                 <div class="num">当前库存</div>
               </div>
               <div id="recordsStatsList" class="stats-list"></div>
-              <div class="empty" id="recordsStatsEmpty" style="display:none;">暂无消耗</div>
+              <div class="empty" id="recordsStatsEmpty" style="display:none;">
+                <div class="empty-illus"></div>
+                <div class="empty-text">暂无消耗记录</div>
+              </div>
             </div>
           </div>
         </div>

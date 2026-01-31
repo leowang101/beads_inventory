@@ -59,15 +59,24 @@ router.get("/api/history", requireAuth, withHandler("history", async (req, res) 
 // 消耗统计：按色号汇总消耗数量（仅展示消耗>0）
 router.get("/api/consumeStats", requireAuth, withHandler("consumeStats", async (req, res) => {
   try {
+    const rawDays = req.query?.days;
+    const days = rawDays === undefined || rawDays === null || rawDays === ""
+      ? 0
+      : Number(rawDays);
+    if(!Number.isFinite(days) || days < 0 || days > 3650 || Math.floor(days) !== days){
+      return sendJson(res, 400, { ok: false, message: "invalid days" });
+    }
+    const dateClause = days > 0 ? " AND h.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY) " : "";
+    const params = days > 0 ? [req.user.id, days] : [req.user.id];
     const [rows] = await safeQuery(
       `SELECT h.code, SUM(h.qty) AS qty, p.hex
        FROM user_history h
        LEFT JOIN palette p ON p.code=h.code
-       WHERE h.user_id=? AND h.htype='consume'
+       WHERE h.user_id=? AND h.htype='consume' ${dateClause}
        GROUP BY h.code
        HAVING SUM(h.qty) > 0
        ORDER BY qty DESC, h.code ASC`,
-      [req.user.id]
+      params
     );
 
     sendJson(res, 200, { ok: true, data: rows, buildTag: BUILD_TAG });
@@ -183,7 +192,7 @@ router.get("/api/recordGroups", requireAuth, withHandler("recordGroups", async (
       SELECT gid, ts, pattern, patternUrl, patternKey, patternCategoryId, total, maxId FROM (
         SELECT
           CONCAT('b:', batch_id) AS gid,
-          UNIX_TIMESTAMP(MAX(created_at))*1000 AS ts,
+          UNIX_TIMESTAMP(MIN(created_at))*1000 AS ts,
           MAX(pattern) AS pattern,
           MAX(pattern_url) AS patternUrl,
           MAX(pattern_key) AS patternKey,
@@ -200,7 +209,7 @@ router.get("/api/recordGroups", requireAuth, withHandler("recordGroups", async (
 
         SELECT
           CONCAT('i:', MIN(id)) AS gid,
-          UNIX_TIMESTAMP(MAX(created_at))*1000 AS ts,
+          UNIX_TIMESTAMP(MIN(created_at))*1000 AS ts,
           MAX(pattern) AS pattern,
           MAX(pattern_url) AS patternUrl,
           MAX(pattern_key) AS patternKey,
@@ -391,7 +400,7 @@ router.post("/api/recordGroupUpdate", requireAuth, withHandler("recordGroupUpdat
       batchId = gid.slice(2);
       if(!batchId) return sendJson(res, 400, { ok:false, message:"invalid gid" });
       const [[base]] = await safeQuery(
-        `SELECT MAX(created_at) AS created_at, MAX(pattern) AS pattern, MAX(pattern_url) AS pattern_url, MAX(pattern_key) AS pattern_key, MAX(source) AS source, MAX(pattern_category_id) AS pattern_category_id
+        `SELECT MIN(created_at) AS created_at, MAX(pattern) AS pattern, MAX(pattern_url) AS pattern_url, MAX(pattern_key) AS pattern_key, MAX(source) AS source, MAX(pattern_category_id) AS pattern_category_id
          FROM user_history
          WHERE user_id=? AND htype=? AND batch_id=?`,
         [req.user.id, type, batchId]

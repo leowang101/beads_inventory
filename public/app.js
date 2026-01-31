@@ -363,7 +363,7 @@ function formatTimeSecondParts(iso){
           groups.set(key, g);
         }
         g.total += Number(h?.qty||0) || 0;
-        if(String(h?.ts||"") > String(g.ts||"")) g.ts = h.ts;
+        if(String(h?.ts||"") < String(g.ts||"")) g.ts = h.ts;
         if(!g.pattern && pat) g.pattern = pat;
         if(g.patternCategoryId === null && cat !== null) g.patternCategoryId = cat;
         g._items.push(h);
@@ -477,8 +477,16 @@ function formatTimeSecondParts(iso){
         }
         if(path.startsWith("/api/consumeStats")){
           const by = new Map();
+          const url = new URL(apiUrl(path));
+          const daysRaw = Number(url.searchParams.get("days") || 0);
+          const days = Number.isFinite(daysRaw) && daysRaw > 0 ? Math.floor(daysRaw) : 0;
+          const cutoff = days > 0 ? (Date.now() - days * 24 * 60 * 60 * 1000) : 0;
           for(const h of (GUEST_HISTORY||[])){
             if(String(h?.type||"").toLowerCase() !== "consume") continue;
+            if(cutoff){
+              const ts = (typeof h?.ts === "number") ? h.ts : Date.parse(h?.ts || "");
+              if(!Number.isFinite(ts) || ts < cutoff) continue;
+            }
             const code = String(h?.code||"").toUpperCase();
             const qty = Number(h?.qty||0) || 0;
             if(!code || qty<=0) continue;
@@ -645,7 +653,7 @@ function formatTimeSecondParts(iso){
 
           const baseTs = groupItems.reduce((acc,it)=>{
             if(!acc) return it.ts;
-            return String(it.ts||"") > String(acc||"") ? it.ts : acc;
+            return String(it.ts||"") < String(acc||"") ? it.ts : acc;
           }, groupItems[0]?.ts);
           const baseSource = String(groupItems[0]?.source || "");
           const basePattern = String(groupItems[0]?.pattern || "");
@@ -3199,6 +3207,7 @@ const criticalInput=document.getElementById("criticalInput");
     const recordsStatsTotalInventory = document.getElementById("recordsStatsTotalInventory");
     const recordsStatsConsumeCount = document.getElementById("recordsStatsConsumeCount");
     const recordsStatsRestockCount = document.getElementById("recordsStatsRestockCount");
+    const recordsStatsFilter = document.getElementById("recordsStatsFilter");
     const todoList = document.getElementById("todoList");
     const todoEmpty = document.getElementById("todoEmpty");
 
@@ -3215,7 +3224,8 @@ const criticalInput=document.getElementById("criticalInput");
       requestSeq: 0,
       cacheKey: "",
       retryAt: 0,
-      consumeTotal: 0
+      consumeTotal: 0,
+      statsDays: 0
     };
     const TODO_STATE = {
       pendingEdit: null
@@ -3261,6 +3271,30 @@ const criticalInput=document.getElementById("criticalInput");
       }else{
         loadAndRenderRecordGroups();
       }
+    }
+
+    function setStatsFilterDays(days){
+      const d = Number(days) || 0;
+      RECORDS_STATE.statsDays = d > 0 ? d : 0;
+      if(recordsStatsFilter){
+        recordsStatsFilter.querySelectorAll(".category-chip").forEach(btn=>{
+          const v = Number(btn.dataset.days || 0) || 0;
+          const active = v === RECORDS_STATE.statsDays;
+          btn.classList.toggle("active", active);
+          btn.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+      }
+      if(RECORDS_STATE.active === "stats"){
+        loadAndRenderConsumeStats();
+      }
+    }
+
+    if(recordsStatsFilter){
+      recordsStatsFilter.querySelectorAll(".category-chip").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          setStatsFilterDays(btn.dataset.days || 0);
+        });
+      });
     }
 
     function getRecordsScrollRoot(listEl){
@@ -3441,8 +3475,10 @@ const criticalInput=document.getElementById("criticalInput");
 
     async function loadAndRenderConsumeStats(){
       try{
+        const days = RECORDS_STATE.statsDays || 0;
+        const statsUrl = days > 0 ? `/api/consumeStats?days=${encodeURIComponent(days)}` : "/api/consumeStats";
         const [statsRes, summaryRes] = await Promise.all([
-          apiGet("/api/consumeStats"),
+          apiGet(statsUrl),
           apiGet("/api/recordsStatsSummary")
         ]);
         const items = Array.isArray(statsRes?.data) ? statsRes.data : [];
