@@ -275,10 +275,12 @@ body.theme-light .float-nav .icon-btn{
   background: transparent;
   cursor:pointer;
   white-space:nowrap;
+  margin:2px 0px 0px 0px;
 }
 .btn-sort.active{
   background: rgba(34,197,94,.15);
   border-color: rgba(34,197,94,.35);
+  margin:2px 0px 0px 0px;
 }
 
     

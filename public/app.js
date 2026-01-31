@@ -111,6 +111,12 @@ const API_BASE = window.location.origin;
       return yiq >= 160 ? "#111827" : "#f6f8fb";
     }
 
+    function formatNumber(value){
+      const n = Number(value);
+      if(!Number.isFinite(n)) return String(value ?? "0");
+      return n.toLocaleString("en-US");
+    }
+
     document.addEventListener("click", ()=>closeCardMenu());
 
     window.addEventListener("scroll", ()=>closeCardMenu(), { passive:true });
@@ -486,6 +492,22 @@ function formatTimeSecondParts(iso){
             .filter(x=>x.qty>0)
             .sort((a,b)=> (b.qty-a.qty) || sortCodes(String(a.code||""), String(b.code||"")));
           return {ok:true, data};
+        }
+        if(path.startsWith("/api/recordsStatsSummary")){
+          let totalConsume = 0;
+          let totalRestock = 0;
+          for(const h of (GUEST_HISTORY||[])){
+            const qty = Number(h?.qty||0) || 0;
+            if(String(h?.type||"").toLowerCase() === "consume") totalConsume += qty;
+            if(String(h?.type||"").toLowerCase() === "restock") totalRestock += qty;
+          }
+          const totalInventory = Object.values(INVENTORY||{}).reduce((acc, v)=> acc + (Number(v)||0), 0);
+          const consumeCount = buildGuestRecordGroups("consume", false).length;
+          const restockCount = buildGuestRecordGroups("restock", false).length;
+          return {
+            ok:true,
+            data: { totalConsume, totalRestock, totalInventory, consumeCount, restockCount }
+          };
         }
 
       }
@@ -3173,8 +3195,10 @@ const criticalInput=document.getElementById("criticalInput");
     const recordsRestockEmpty = document.getElementById("recordsRestockEmpty");
     const recordsStatsList = document.getElementById("recordsStatsList");
     const recordsStatsEmpty = document.getElementById("recordsStatsEmpty");
-    const recordsStatsTotalChip = document.getElementById("recordsStatsTotalChip");
-    const recordsStatsCountChip = document.getElementById("recordsStatsCountChip");
+    const recordsStatsTotalConsume = document.getElementById("recordsStatsTotalConsume");
+    const recordsStatsTotalInventory = document.getElementById("recordsStatsTotalInventory");
+    const recordsStatsConsumeCount = document.getElementById("recordsStatsConsumeCount");
+    const recordsStatsRestockCount = document.getElementById("recordsStatsRestockCount");
     const todoList = document.getElementById("todoList");
     const todoEmpty = document.getElementById("todoEmpty");
 
@@ -3417,9 +3441,21 @@ const criticalInput=document.getElementById("criticalInput");
 
     async function loadAndRenderConsumeStats(){
       try{
-        const res = await apiGet("/api/consumeStats");
-        const items = Array.isArray(res.data) ? res.data : [];
-        renderConsumeStats(items);
+        const [statsRes, summaryRes] = await Promise.all([
+          apiGet("/api/consumeStats"),
+          apiGet("/api/recordsStatsSummary")
+        ]);
+        const items = Array.isArray(statsRes?.data) ? statsRes.data : [];
+        const listSummary = renderConsumeStats(items);
+        const summary = summaryRes?.data || summaryRes || {};
+        const totalConsume = Number(summary?.totalConsume ?? listSummary.totalConsume ?? 0) || 0;
+        const totalInventory = Number(summary?.totalInventory ?? 0) || 0;
+        const consumeCount = Number(summary?.consumeCount ?? 0) || 0;
+        const restockCount = Number(summary?.restockCount ?? 0) || 0;
+        if(recordsStatsTotalConsume) recordsStatsTotalConsume.textContent = formatNumber(totalConsume);
+        if(recordsStatsTotalInventory) recordsStatsTotalInventory.textContent = formatNumber(totalInventory);
+        if(recordsStatsConsumeCount) recordsStatsConsumeCount.textContent = formatNumber(consumeCount);
+        if(recordsStatsRestockCount) recordsStatsRestockCount.textContent = formatNumber(restockCount);
       }catch(e){
         toast(e?.message || "加载统计失败","error");
       }
@@ -3428,7 +3464,7 @@ const criticalInput=document.getElementById("criticalInput");
     function renderConsumeStats(items){
       const listEl = recordsStatsList;
       const emptyEl = recordsStatsEmpty;
-      if(!listEl || !emptyEl) return;
+      if(!listEl || !emptyEl) return { totalConsume: 0, codeCount: 0 };
 
       const normalized = (items||[]).map(it=>{
         const code = String(it?.code || "").toUpperCase();
@@ -3440,13 +3476,11 @@ const criticalInput=document.getElementById("criticalInput");
         .sort((a,b)=> (b.qty-a.qty) || sortCodes(a.code, b.code));
 
       const total = normalized.reduce((acc, it)=> acc + (Number(it.qty)||0), 0);
-      if(recordsStatsTotalChip) recordsStatsTotalChip.textContent = String(total);
-      if(recordsStatsCountChip) recordsStatsCountChip.textContent = String(normalized.length);
 
       listEl.innerHTML = "";
       if(normalized.length===0){
         emptyEl.style.display="block";
-        return;
+        return { totalConsume: 0, codeCount: 0 };
       }
       emptyEl.style.display="none";
 
@@ -3483,6 +3517,7 @@ const criticalInput=document.getElementById("criticalInput");
         row.appendChild(cRemain);
         listEl.appendChild(row);
       });
+      return { totalConsume: total, codeCount: normalized.length };
     }
 
     function renderRecordGroups(type, groups, options){

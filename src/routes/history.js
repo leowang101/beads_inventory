@@ -76,6 +76,62 @@ router.get("/api/consumeStats", requireAuth, withHandler("consumeStats", async (
   }
 }));
 
+// 统计摘要：总消耗、总库存、消耗次数、补充次数
+router.get("/api/recordsStatsSummary", requireAuth, withHandler("recordsStatsSummary", async (req, res) => {
+  try {
+    const [[consumeSum]] = await safeQuery(
+      "SELECT IFNULL(SUM(qty),0) AS totalConsume FROM user_history WHERE user_id=? AND htype='consume'",
+      [req.user.id]
+    );
+    const [[totalInventoryRow]] = await safeQuery(
+      "SELECT IFNULL(SUM(qty),0) AS totalInventory FROM user_inventory WHERE user_id=?",
+      [req.user.id]
+    );
+
+    const consumeCountSql = `
+      SELECT COUNT(1) AS cnt FROM (
+        SELECT 1
+        FROM user_history
+        WHERE user_id=? AND htype='consume' AND batch_id IS NOT NULL
+        GROUP BY batch_id
+        UNION ALL
+        SELECT 1
+        FROM user_history
+        WHERE user_id=? AND htype='consume' AND batch_id IS NULL
+        GROUP BY created_at, IFNULL(pattern,''), IFNULL(source,''), IFNULL(pattern_category_id,0)
+      ) t
+    `;
+    const restockCountSql = `
+      SELECT COUNT(1) AS cnt FROM (
+        SELECT 1
+        FROM user_history
+        WHERE user_id=? AND htype='restock' AND batch_id IS NOT NULL
+        GROUP BY batch_id
+        UNION ALL
+        SELECT 1
+        FROM user_history
+        WHERE user_id=? AND htype='restock' AND batch_id IS NULL
+        GROUP BY created_at, IFNULL(pattern,''), IFNULL(source,''), IFNULL(pattern_category_id,0)
+      ) t
+    `;
+    const [[consumeCountRow]] = await safeQuery(consumeCountSql, [req.user.id, req.user.id]);
+    const [[restockCountRow]] = await safeQuery(restockCountSql, [req.user.id, req.user.id]);
+
+    sendJson(res, 200, {
+      ok: true,
+      data: {
+        totalConsume: consumeSum?.totalConsume ?? 0,
+        totalInventory: totalInventoryRow?.totalInventory ?? 0,
+        consumeCount: consumeCountRow?.cnt ?? 0,
+        restockCount: restockCountRow?.cnt ?? 0
+      },
+      buildTag: BUILD_TAG
+    });
+  } catch (e) {
+    sendJson(res, 500, { ok: false, message: e.message });
+  }
+}));
+
 
 router.get("/api/recordGroups", requireAuth, withHandler("recordGroups", async (req, res) => {
   try{
