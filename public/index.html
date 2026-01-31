@@ -419,6 +419,31 @@
       </section>
     </section>
 
+    <section class="page" id="pageWorks" data-page="works">
+      <div class="works-stats stats-cards" id="worksStats">
+        <div class="stats-card">
+          <div class="stats-card-label">累计作品数</div>
+          <div class="stats-card-value" id="worksTotalCount">0</div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card-label">累计消耗</div>
+          <div class="stats-card-value" id="worksTotalConsume">0</div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-card-label">累计拼豆时长</div>
+          <div class="stats-card-value" id="worksTotalDuration">0h</div>
+        </div>
+      </div>
+      <div class="category-tabs" id="worksCategoryBar">
+        <div class="category-scroll" id="worksCategoryList" aria-label="作品图纸分类"></div>
+      </div>
+      <div class="works-grid" id="worksList"></div>
+      <div class="empty works-empty" id="worksEmpty" style="display:none;">
+        <div class="empty-illus"></div>
+        <button class="btn-primary" id="worksEmptyAction" type="button">去添加作品</button>
+      </div>
+    </section>
+
     <section class="page" id="pageMe" data-page="me">
 
       <section class="panel">
@@ -530,6 +555,10 @@
     <button class="tabbar-btn" data-tab="records" type="button" aria-label="记录">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a2 2 0 0 1 2 2v14l-4-3H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/></svg>
       <span class="tab-label">记录</span>
+    </button>
+    <button class="tabbar-btn" data-tab="works" type="button" aria-label="作品集">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="M7 14l3-3 3 3 3-4 4 5"/></svg>
+      <span class="tab-label">作品集</span>
     </button>
     <button class="tabbar-btn" data-tab="stats" type="button" aria-label="统计">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h3v7H5z"/><path d="M11 5h3v14h-3z"/><path d="M17 9h3v10h-3z"/></svg>
@@ -648,7 +677,10 @@
   <dialog id="workDialog">
     <div class="modal-head">
       <h3>发布作品</h3>
-      <button id="workDialogClose" type="button">关闭</button>
+      <div class="modal-head-actions">
+        <button id="workDialogDelete" class="btn-danger" type="button">删除作品</button>
+        <button id="workDialogClose" type="button">关闭</button>
+      </div>
     </div>
     <div class="modal-body">
       <div class="work-upload">
@@ -685,12 +717,21 @@
 
       <div class="work-inline-fields">
         <div class="modal-field">
-        <label for="workDuration">完成时长</label>
-        <input id="workDuration" type="text" placeholder="例如：1小时25分钟" maxlength="32" />
+          <label for="workDuration">完成时长</label>
+          <div class="work-duration-inputs" id="workDuration">
+            <div class="duration-field">
+              <input id="workDurationHours" type="number" min="0" max="240" step="1" inputmode="numeric" placeholder="0" />
+              <span class="duration-unit">小时</span>
+            </div>
+            <div class="duration-field">
+              <input id="workDurationMinutes" type="number" min="0" max="60" step="1" inputmode="numeric" placeholder="0" />
+              <span class="duration-unit">分钟</span>
+            </div>
+          </div>
         </div>
         <div class="modal-field">
-        <label for="workNote">备注</label>
-        <input id="workNote" type="text" placeholder="任何你想说的话" maxlength="256" />
+          <label for="workNote">备注</label>
+          <input id="workNote" type="text" placeholder="任何你想说的话" maxlength="256" />
         </div>
       </div>
     </div>
@@ -719,6 +760,26 @@
           <button id="workCropperConfirm" class="btn-primary" type="button">确认裁剪</button>
         </div>
       </div>
+    </div>
+  </dialog>
+
+  <!-- 作品详情 -->
+  <dialog id="workDetailDialog">
+    <div class="modal-head">
+      <h3>作品详情</h3>
+      <div class="modal-head-actions">
+        <button id="workDetailEdit" class="btn-ghost" type="button">编辑</button>
+        <button id="workDetailShare" class="btn-secondary" type="button">分享</button>
+        <button id="workDetailClose" type="button">关闭</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="work-detail-image">
+        <img id="workDetailImage" alt="作品成品图" />
+      </div>
+      <div class="work-detail-title" id="workDetailTitle"></div>
+      <div class="work-detail-meta" id="workDetailMeta"></div>
+      <div class="work-detail-notes" id="workDetailNotes"></div>
     </div>
   </dialog>
 

@@ -72,6 +72,9 @@ const API_BASE = window.location.origin;
       if(target === "stats"){
         try{ setRecordsTab(RECORDS_STATE.active); }catch{}
       }
+      if(target === "works"){
+        try{ loadAndRenderWorks(); }catch{}
+      }
     }
 
     function initAppNavigation(){
@@ -83,6 +86,15 @@ const API_BASE = window.location.origin;
       const rawSaved = (()=>{ try{ return localStorage.getItem(APP_PAGE_KEY) || "inventory"; }catch{ return "inventory"; }})();
       const saved = SUBPAGE_PARENT[rawSaved] ? SUBPAGE_PARENT[rawSaved] : rawSaved;
       showPage(saved, {scrollTop:false});
+    }
+
+    function syncHeaderHeight(){
+      const header = document.querySelector("header");
+      if(!header) return;
+      const rect = header.getBoundingClientRect();
+      if(rect && rect.height){
+        document.documentElement.style.setProperty("--app-header-height", `${rect.height}px`);
+      }
     }
 
 
@@ -308,6 +320,27 @@ function formatTimeSecondParts(iso){
       }catch{
         return String(iso||"");
       }
+    }
+    function formatDateOnly(iso){
+      if(!iso) return "";
+      try{
+        let d = (typeof iso==="number") ? new Date(iso) : new Date(iso);
+        if(isNaN(d.getTime()) && typeof iso==="string"){
+          d=new Date(iso.replace(" ","T"));
+        }
+        if(isNaN(d.getTime())) return String(iso);
+        return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+      }catch{
+        return String(iso||"");
+      }
+    }
+    function formatDurationMinutes(total){
+      const mins = Number(total) || 0;
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if(h > 0 && m > 0) return `${h}小时${m}分钟`;
+      if(h > 0) return `${h}小时`;
+      return `${m}分钟`;
     }
     function timePartsHtml(parts){
       const d = parts?.date ?? "";
@@ -590,6 +623,12 @@ function formatTimeSecondParts(iso){
       if(!IS_LOGGED_IN){
 
         if(path==="/api/workPublish"){
+          toast("请登录后发布作品","warn");
+          const err = new Error("unauthorized");
+          err.httpStatus = 401;
+          throw err;
+        }
+        if(path==="/api/workUpdate" || path==="/api/workDelete"){
           toast("请登录后发布作品","warn");
           const err = new Error("unauthorized");
           err.httpStatus = 401;
@@ -3073,6 +3112,39 @@ const criticalInput=document.getElementById("criticalInput");
       });
     }
 
+    function renderWorksCategoryTabs(){
+      if(!worksCategoryBar || !worksCategoryList) return;
+      const list = (PATTERN_CATEGORIES||[]);
+      if(list.length===0){
+        worksCategoryBar.style.display = "none";
+        worksCategoryList.innerHTML = "";
+        WORKS_STATE.categoryId = null;
+        return;
+      }
+      worksCategoryBar.style.display = "";
+      worksCategoryList.innerHTML = "";
+      const createBtn = (label, id)=>{
+        const btn = document.createElement("button");
+        btn.type = "button";
+        const active = (id===null && !WORKS_STATE.categoryId) || (id && String(WORKS_STATE.categoryId)===String(id));
+        btn.className = "category-chip" + (active ? " active" : "");
+        btn.textContent = label;
+        btn.dataset.id = id===null ? "" : String(id);
+        btn.addEventListener("click", ()=>{
+          const nextId = btn.dataset.id ? String(btn.dataset.id) : null;
+          if(String(WORKS_STATE.categoryId||"") === String(nextId||"")) return;
+          WORKS_STATE.categoryId = nextId;
+          renderWorksCategoryTabs();
+          loadAndRenderWorks();
+        });
+        return btn;
+      };
+      worksCategoryList.appendChild(createBtn("全部", null));
+      list.forEach(cat=>{
+        worksCategoryList.appendChild(createBtn(cat.name, cat.id));
+      });
+    }
+
     async function loadPatternCategories(){
       try{
         const res = await apiGet("/api/patternCategories");
@@ -3086,10 +3158,14 @@ const criticalInput=document.getElementById("criticalInput");
       if(TODO_ACTIVE_CATEGORY_ID && !PATTERN_CATEGORIES.some(c=>String(c.id)===String(TODO_ACTIVE_CATEGORY_ID))){
         TODO_ACTIVE_CATEGORY_ID = null;
       }
+      if(WORKS_STATE.categoryId && !PATTERN_CATEGORIES.some(c=>String(c.id)===String(WORKS_STATE.categoryId))){
+        WORKS_STATE.categoryId = null;
+      }
       renderPatternCategoryManager();
       renderPatternCategorySelects();
       renderRecordsCategoryTabs();
       renderTodoCategoryTabs();
+      renderWorksCategoryTabs();
       if(RECORDS_STATE && RECORDS_STATE.active === "consume"){
         loadAndRenderRecordGroups();
       }
@@ -3199,6 +3275,7 @@ const criticalInput=document.getElementById("criticalInput");
     const workDialogClose = document.getElementById("workDialogClose");
     const workDialogCancel = document.getElementById("workDialogCancel");
     const workDialogSave = document.getElementById("workDialogSave");
+    const workDialogDelete = document.getElementById("workDialogDelete");
     const workCropperDialog = document.getElementById("workCropperDialog");
     const workUploadBox = document.getElementById("workUploadBox");
     const workUploadPlaceholder = document.getElementById("workUploadPlaceholder");
@@ -3212,8 +3289,17 @@ const criticalInput=document.getElementById("criticalInput");
     const workCropperConfirm = document.getElementById("workCropperConfirm");
     const workFinishedAtWrap = document.getElementById("workFinishedAtWrap");
     const workFinishedAtInput = document.getElementById("workFinishedAt");
-    const workDurationInput = document.getElementById("workDuration");
+    const workDurationHours = document.getElementById("workDurationHours");
+    const workDurationMinutes = document.getElementById("workDurationMinutes");
     const workNoteInput = document.getElementById("workNote");
+    const workDetailDialog = document.getElementById("workDetailDialog");
+    const workDetailClose = document.getElementById("workDetailClose");
+    const workDetailEdit = document.getElementById("workDetailEdit");
+    const workDetailShare = document.getElementById("workDetailShare");
+    const workDetailImage = document.getElementById("workDetailImage");
+    const workDetailTitle = document.getElementById("workDetailTitle");
+    const workDetailMeta = document.getElementById("workDetailMeta");
+    const workDetailNotes = document.getElementById("workDetailNotes");
 
 
     const recordsOnlyWithPattern = document.getElementById("recordsOnlyWithPattern");
@@ -3231,6 +3317,16 @@ const criticalInput=document.getElementById("criticalInput");
     const recordsStatsFilter = document.getElementById("recordsStatsFilter");
     const todoList = document.getElementById("todoList");
     const todoEmpty = document.getElementById("todoEmpty");
+    const worksPanel = document.getElementById("worksPanel");
+    const worksStats = document.getElementById("worksStats");
+    const worksTotalCount = document.getElementById("worksTotalCount");
+    const worksTotalConsume = document.getElementById("worksTotalConsume");
+    const worksTotalDuration = document.getElementById("worksTotalDuration");
+    const worksCategoryBar = document.getElementById("worksCategoryBar");
+    const worksCategoryList = document.getElementById("worksCategoryList");
+    const worksList = document.getElementById("worksList");
+    const worksEmpty = document.getElementById("worksEmpty");
+    const worksEmptyAction = document.getElementById("worksEmptyAction");
 
     const RECORDS_STATE = {
       active: "consume",
@@ -3245,14 +3341,27 @@ const criticalInput=document.getElementById("criticalInput");
       cacheKey: "",
       retryAt: 0,
       consumeTotal: 0,
-      statsDays: 0
+      statsDays: 0,
+      workMap: new Map()
     };
     const TODO_STATE = {
       pendingEdit: null
     };
+    const WORKS_STATE = {
+      categoryId: null,
+      pageSize: 30,
+      cursor: null,
+      hasMore: true,
+      loading: false,
+      requestSeq: 0,
+      cacheKey: "",
+      list: []
+    };
     const WORK_PUBLISHED_GIDS = new Set();
     const WORK_STATE = {
       gid: null,
+      editId: null,
+      editItem: null,
       cropper: null,
       cropperBaseRatio: 1,
       cropperReady: false,
@@ -3320,6 +3429,8 @@ const criticalInput=document.getElementById("criticalInput");
 
     function resetWorkDialog(){
       WORK_STATE.gid = null;
+      WORK_STATE.editId = null;
+      WORK_STATE.editItem = null;
       WORK_STATE.croppedFile = null;
       WORK_STATE.prevFile = null;
       WORK_STATE.busy = false;
@@ -3332,7 +3443,8 @@ const criticalInput=document.getElementById("criticalInput");
       if(workDialog) workDialog.classList.remove("is-locked");
       const bd = document.querySelector('.modal-backdrop');
       if(bd) bd.classList.remove('submodal');
-      if(workDurationInput) workDurationInput.value = "";
+      if(workDurationHours) workDurationHours.value = "";
+      if(workDurationMinutes) workDurationMinutes.value = "";
       if(workNoteInput) workNoteInput.value = "";
       if(workFinishedAtInput){
         const now = new Date();
@@ -3341,6 +3453,11 @@ const criticalInput=document.getElementById("criticalInput");
       }
       if(workUploadInput) workUploadInput.value = "";
       if(workDialogSave) workDialogSave.disabled = true;
+      if(workDialogDelete) workDialogDelete.style.display = "none";
+      if(workDialog){
+        const title = workDialog.querySelector(".modal-head h3");
+        if(title) title.textContent = "发布作品";
+      }
       if(workCropperWrap) workCropperWrap.style.display = "none";
       cleanupWorkCropper();
       updateWorkPreview("");
@@ -3475,7 +3592,7 @@ const criticalInput=document.getElementById("criticalInput");
         WORK_STATE.prevFile = null;
         if(workDialogSave) workDialogSave.disabled = false;
       }else{
-        if(workDialogSave) workDialogSave.disabled = !WORK_STATE.croppedFile;
+        if(workDialogSave) workDialogSave.disabled = !WORK_STATE.croppedFile && !WORK_STATE.editId;
       }
     }
 
@@ -3486,40 +3603,84 @@ const criticalInput=document.getElementById("criticalInput");
         return;
       }
       const gid = String(WORK_STATE.gid || "");
-      if(!gid){
+      const isEdit = !!WORK_STATE.editId;
+      if(!gid && !isEdit){
         toast("记录异常，请重试","error");
         return;
       }
-      if(!WORK_STATE.croppedFile){
+      const hasNewImage = !!WORK_STATE.croppedFile;
+      if(!hasNewImage && !isEdit){
         toast("请先上传作品图","warn");
+        return;
+      }
+      const durationInfo = normalizeDurationInputs();
+      if(durationInfo.totalMinutes < 1){
+        toast("完成时长至少 1 分钟","warn");
+        return;
+      }
+      if(durationInfo.totalMinutes > 240 * 60){
+        toast("完成时长不能超过 240 小时","warn");
         return;
       }
       WORK_STATE.busy = true;
       if(workDialogSave) workDialogSave.disabled = true;
       try{
-        const upload = await uploadPatternImage(WORK_STATE.croppedFile);
-        if(!upload || !upload.cdnUrl) throw new Error("图片上传失败");
-        const payload = {
-          gid,
-          type: "consume",
-          imageUrl: upload.cdnUrl,
-          imageKey: upload.objectKey || "",
-          duration: (workDurationInput?.value || "").trim().slice(0, 32) || null,
-          note: (workNoteInput?.value || "").trim().slice(0, 256) || null,
-          finishedAt: (workFinishedAtInput?.value || "").trim() || null
-        };
-        await apiPost("/api/workPublish", payload);
-        WORK_PUBLISHED_GIDS.add(gid);
-        if(WORK_STATE.triggerButton){
-          setPublishButtonState(WORK_STATE.triggerButton, true);
+        let upload = null;
+        if(hasNewImage){
+          upload = await uploadPatternImage(WORK_STATE.croppedFile);
+          if(!upload || !upload.cdnUrl) throw new Error("图片上传失败");
         }
-        toast("作品保存成功","success");
+        const durationLabel = (() => {
+          const h = durationInfo.hours || 0;
+          const m = durationInfo.minutes || 0;
+          if(h > 0 && m > 0) return `${h}小时${m}分钟`;
+          if(h > 0) return `${h}小时`;
+          return `${m}分钟`;
+        })();
+        const noteValue = (workNoteInput?.value || "").trim().slice(0, 256) || null;
+        const finishedAt = (workFinishedAtInput?.value || "").trim() || null;
+        if(isEdit){
+          const payload = {
+            workId: WORK_STATE.editId,
+            duration: durationLabel,
+            durationMinutes: durationInfo.totalMinutes,
+            note: noteValue,
+            finishedAt
+          };
+          if(upload && upload.cdnUrl){
+            payload.imageUrl = upload.cdnUrl;
+            payload.imageKey = upload.objectKey || "";
+          }
+          await apiPost("/api/workUpdate", payload);
+          toast("作品保存成功","success");
+        }else{
+          const payload = {
+            gid,
+            type: "consume",
+            imageUrl: upload.cdnUrl,
+            imageKey: upload.objectKey || "",
+            duration: durationLabel,
+            durationMinutes: durationInfo.totalMinutes,
+            note: noteValue,
+            finishedAt
+          };
+          await apiPost("/api/workPublish", payload);
+          WORK_PUBLISHED_GIDS.add(gid);
+          if(WORK_STATE.triggerButton){
+            setPublishButtonState(WORK_STATE.triggerButton, true);
+          }
+          toast("作品保存成功","success");
+        }
+        if(document.body.dataset.page === "works"){
+          await loadAndRenderWorks();
+        }
+        if(workDetailDialog && workDetailDialog.open) closeDialog(workDetailDialog);
         if(workDialog) closeDialog(workDialog);
       }catch(e){
         toast(e?.message || "作品保存失败","error");
       }finally{
         WORK_STATE.busy = false;
-        if(workDialogSave) workDialogSave.disabled = !WORK_STATE.croppedFile;
+        if(workDialogSave) workDialogSave.disabled = !WORK_STATE.croppedFile && !WORK_STATE.editId;
       }
     }
 
@@ -3529,6 +3690,36 @@ const criticalInput=document.getElementById("criticalInput");
         return;
       }
       if(workUploadInput) workUploadInput.click();
+    }
+
+    function clampNumber(val, min, max){
+      const num = Number(val);
+      if(!Number.isFinite(num)) return null;
+      const rounded = Math.floor(num);
+      if(rounded < min) return min;
+      if(rounded > max) return max;
+      return rounded;
+    }
+
+    function normalizeDurationInputs(){
+      const hRaw = clampNumber(workDurationHours?.value, 0, 240);
+      const mRaw = clampNumber(workDurationMinutes?.value, 0, 60);
+      if(workDurationHours && hRaw !== null) workDurationHours.value = String(hRaw);
+      if(workDurationMinutes && mRaw !== null) workDurationMinutes.value = String(mRaw);
+
+      if(hRaw === null && mRaw === null) return { hours: 0, minutes: 0, totalMinutes: 0 };
+      let hours = hRaw === null ? 0 : hRaw;
+      let minutes = mRaw === null ? 0 : mRaw;
+      if(minutes === 60){
+        if(hours < 240){
+          hours += 1;
+          minutes = 0;
+          if(workDurationHours) workDurationHours.value = String(hours);
+          if(workDurationMinutes) workDurationMinutes.value = "0";
+        }
+      }
+      const totalMinutes = hours * 60 + minutes;
+      return { hours, minutes, totalMinutes };
     }
 
     function setRecordsTab(type){
@@ -3694,6 +3885,10 @@ const criticalInput=document.getElementById("criticalInput");
       RECORDS_STATE.consumeTotal = 0;
       RECORDS_STATE.expanded.clear();
       RECORDS_STATE.detailCache.clear();
+      if(type === "consume"){
+        RECORDS_STATE.workMap.clear();
+        WORK_PUBLISHED_GIDS.clear();
+      }
       const listEl = type==="consume" ? recordsConsumeList : recordsRestockList;
       const emptyEl = type==="consume" ? recordsConsumeEmpty : recordsRestockEmpty;
       if(listEl) listEl.innerHTML = "";
@@ -3907,6 +4102,10 @@ const criticalInput=document.getElementById("criticalInput");
         const patternUrl = (patternUrlRaw === null || patternUrlRaw === undefined) ? "" : String(patternUrlRaw).trim();
         const patternClean = (pattern==="手动调整") ? "" : pattern;
         const total = Number(g.total ?? g.sum ?? g.totalQty ?? 0) || 0;
+        if(type === "consume" && g?.workId){
+          RECORDS_STATE.workMap.set(gid, g);
+          WORK_PUBLISHED_GIDS.add(gid);
+        }
 
           const tpText = formatTimeMinuteString(ts);
         const k = _recKey(type, gid);
@@ -4206,6 +4405,203 @@ const criticalInput=document.getElementById("criticalInput");
       }
     }
 
+    function formatWorkDuration(item){
+      const minutes = Number(item?.durationMinutes ?? item?.duration_minutes ?? 0) || 0;
+      if(minutes > 0) return formatDurationMinutes(minutes);
+      const raw = (item?.duration || "").trim();
+      return raw || "—";
+    }
+
+    function resetWorksPaging(){
+      WORKS_STATE.cursor = null;
+      WORKS_STATE.hasMore = true;
+      WORKS_STATE.loading = false;
+      WORKS_STATE.requestSeq = 0;
+      WORKS_STATE.cacheKey = "";
+      WORKS_STATE.list = [];
+      if(worksList) worksList.innerHTML = "";
+    }
+
+    async function fetchWorksPage({reset}){
+      if(!worksList || !worksEmpty) return;
+      if(!IS_LOGGED_IN){
+        toast("请登录后查看作品","warn");
+        return;
+      }
+      const categoryParam = WORKS_STATE.categoryId ? String(WORKS_STATE.categoryId) : "";
+      const key = `${categoryParam || ""}`;
+      if(reset || WORKS_STATE.cacheKey !== key){
+        WORKS_STATE.cacheKey = key;
+        resetWorksPaging();
+        reset = true;
+      }
+      if(WORKS_STATE.loading) return;
+      if(!reset && !WORKS_STATE.hasMore) return;
+
+      const params = new URLSearchParams();
+      if(categoryParam) params.set("patternCategoryId", categoryParam);
+      params.set("limit", String(WORKS_STATE.pageSize));
+      if(!reset && WORKS_STATE.cursor){
+        params.set("cursor", String(WORKS_STATE.cursor));
+      }
+      const url = `/api/works?${params.toString()}`;
+      const seq = ++WORKS_STATE.requestSeq;
+      WORKS_STATE.loading = true;
+      try{
+        const res = await apiGet(url);
+        if(seq !== WORKS_STATE.requestSeq) return;
+        const items = Array.isArray(res?.data) ? res.data : [];
+        const hasMore = !!res?.hasMore;
+        const nextCursor = res?.nextCursor ? String(res.nextCursor) : null;
+        WORKS_STATE.cursor = nextCursor || null;
+        WORKS_STATE.hasMore = hasMore && !!nextCursor;
+        if(reset) WORKS_STATE.list = [];
+        WORKS_STATE.list = WORKS_STATE.list.concat(items);
+        renderWorksList(WORKS_STATE.list);
+      }catch(e){
+        toast(e?.message || "加载作品失败","error");
+      }finally{
+        if(seq === WORKS_STATE.requestSeq) WORKS_STATE.loading = false;
+      }
+    }
+
+    async function loadWorksSummary(){
+      if(!worksTotalCount || !worksTotalConsume || !worksTotalDuration) return;
+      if(!IS_LOGGED_IN) return;
+      try{
+        const params = new URLSearchParams();
+        if(WORKS_STATE.categoryId) params.set("patternCategoryId", String(WORKS_STATE.categoryId));
+        const url = params.toString() ? `/api/worksSummary?${params.toString()}` : "/api/worksSummary";
+        const res = await apiGet(url);
+        const data = res?.data || res || {};
+        const totalCount = Number(data?.totalCount ?? 0) || 0;
+        const totalConsume = Number(data?.totalConsume ?? 0) || 0;
+        const totalMinutes = Number(data?.totalDurationMinutes ?? 0) || 0;
+        worksTotalCount.textContent = formatNumber(totalCount);
+        worksTotalConsume.textContent = formatNumber(totalConsume);
+        worksTotalDuration.textContent = totalMinutes > 0 ? formatDurationMinutes(totalMinutes) : "0分钟";
+      }catch(e){
+        toast(e?.message || "加载作品统计失败","error");
+      }
+    }
+
+    function renderWorksList(items){
+      if(!worksList || !worksEmpty) return;
+      worksList.innerHTML = "";
+      const list = Array.isArray(items) ? items : [];
+      if(list.length === 0){
+        worksEmpty.style.display = "block";
+        if(worksStats) worksStats.style.display = "none";
+        if(worksCategoryBar) worksCategoryBar.style.display = "none";
+        return;
+      }
+      worksEmpty.style.display = "none";
+      if(worksStats) worksStats.style.display = "";
+      if(worksCategoryBar) worksCategoryBar.style.display = "";
+
+      list.forEach(item=>{
+        const card = document.createElement("div");
+        card.className = "work-card";
+        card.dataset.id = String(item.workId || item.id || "");
+        if(item.gid){
+          WORK_PUBLISHED_GIDS.add(String(item.gid));
+        }
+        const img = document.createElement("img");
+        img.src = String(item.imageUrl || item.image_url || "");
+        img.alt = String(item.pattern || "作品");
+        card.appendChild(img);
+
+        const body = document.createElement("div");
+        body.className = "work-card-body";
+        const title = document.createElement("div");
+        title.className = "work-card-title";
+        title.textContent = item.pattern || "未命名图纸";
+        const meta = document.createElement("div");
+        meta.className = "work-card-meta";
+        const time = document.createElement("div");
+        time.className = "meta-item";
+        const dateText = formatDateOnly(item.finishedAt || item.finished_at || item.ts || "");
+        time.innerHTML = `<span class="meta-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span>${escapeHtml(dateText)}</span>`;
+        const total = document.createElement("div");
+        total.className = "meta-item";
+        total.innerHTML = `<span class="meta-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3.5"></circle></svg></span><span>${escapeHtml(formatNumber(item.total || 0))}</span>`;
+        meta.appendChild(time);
+        meta.appendChild(total);
+        body.appendChild(title);
+        body.appendChild(meta);
+        card.appendChild(body);
+        card.addEventListener("click", ()=>openWorkDetail(item));
+        worksList.appendChild(card);
+      });
+    }
+
+    async function loadAndRenderWorks(){
+      if(!IS_LOGGED_IN){
+        toast("请登录后查看作品","warn");
+        return;
+      }
+      renderWorksCategoryTabs();
+      await Promise.all([loadWorksSummary(), fetchWorksPage({reset:true})]);
+    }
+
+    function openWorkDetail(item){
+      if(!workDetailDialog) return;
+      const pattern = item?.pattern || "未命名图纸";
+      const catName = item?.patternCategoryId ? getPatternCategoryNameById(item.patternCategoryId) : "";
+      const finishedAt = formatTimeMinuteString(item?.finishedAt || item?.finished_at || item?.ts || "");
+      const total = formatNumber(item?.total || 0);
+      const duration = formatWorkDuration(item);
+      const note = (item?.note || "").trim();
+
+      if(workDetailImage) workDetailImage.src = String(item?.imageUrl || item?.image_url || "");
+      if(workDetailTitle) workDetailTitle.textContent = pattern;
+      if(workDetailMeta){
+        workDetailMeta.innerHTML = "";
+        const rows = [
+          {label:"图纸分类", value: catName || "未分类"},
+          {label:"完成时间", value: finishedAt || "—"},
+          {label:"拼豆数量", value: total},
+          {label:"拼豆时长", value: duration}
+        ];
+        rows.forEach(r=>{
+          const div = document.createElement("div");
+          div.className = "meta-item";
+          div.innerHTML = `<span>${escapeHtml(r.label)}：</span><strong>${escapeHtml(r.value)}</strong>`;
+          workDetailMeta.appendChild(div);
+        });
+      }
+      if(workDetailNotes){
+        workDetailNotes.textContent = note || "暂无备注";
+      }
+      WORK_STATE.editItem = item;
+      openDialog(workDetailDialog);
+    }
+
+    function openWorkEdit(item){
+      if(!item) return;
+      openWorkDialog(String(item.gid || ""), null);
+      WORK_STATE.editId = String(item.workId || item.id || "");
+      WORK_STATE.editItem = item;
+      if(workDialogDelete) workDialogDelete.style.display = "inline-flex";
+      if(workDialog){
+        const title = workDialog.querySelector(".modal-head h3");
+        if(title) title.textContent = "编辑作品";
+      }
+      updateWorkPreview(String(item?.imageUrl || item?.image_url || ""));
+      if(workFinishedAtInput){
+        const dt = item?.finishedAt || item?.finished_at || "";
+        if(dt){
+          const s = formatTimeMinuteString(dt).replace(" ", "T");
+          workFinishedAtInput.value = s;
+        }
+      }
+      const mins = Number(item?.durationMinutes ?? item?.duration_minutes ?? 0) || 0;
+      if(workDurationHours) workDurationHours.value = String(Math.floor(mins / 60));
+      if(workDurationMinutes) workDurationMinutes.value = String(mins % 60);
+      if(workNoteInput) workNoteInput.value = String(item?.note || "");
+      if(workDialogSave) workDialogSave.disabled = false;
+    }
+
     async function ensureRecordDetail(type, gid, container){
       const key = _recKey(type, gid);
       if(RECORDS_STATE.detailCache.has(key)){
@@ -4469,9 +4865,13 @@ const criticalInput=document.getElementById("criticalInput");
     }
 
     function openRecordDeleteConfirm(type, gid){
-      const message = type==="consume"
+      const hasWork = type === "consume" && RECORDS_STATE.workMap.has(String(gid || ""));
+      let message = type==="consume"
         ? "删除会补回已扣减的拼豆库存，是否确认删除"
         : "删除会减掉已补充的拼豆库存，是否确认删除";
+      if(hasWork){
+        message += "\n该记录已发布作品，删除记录会同时删除作品。";
+      }
       openConfirmDialog({
         title: "删除记录",
         text: message,
@@ -4613,6 +5013,40 @@ const criticalInput=document.getElementById("criticalInput");
     if(workDialogClose) workDialogClose.addEventListener("click", ()=>{ if(workDialog) closeDialog(workDialog); });
     if(workDialogCancel) workDialogCancel.addEventListener("click", ()=>{ if(workDialog) closeDialog(workDialog); });
     if(workDialogSave) workDialogSave.addEventListener("click", saveWork);
+    if(workDialogDelete){
+      workDialogDelete.addEventListener("click", ()=>{
+        if(!WORK_STATE.editId) return;
+        const workId = WORK_STATE.editId;
+        const gid = String(WORK_STATE.editItem?.gid || WORK_STATE.gid || "");
+        openConfirmDialog({
+          title: "删除作品",
+          text: "删除后无法恢复，是否确认删除？",
+          confirmLabel: "确认删除",
+          confirmClass: "btn-danger",
+          onConfirm: async ()=>{
+            try{
+              if(confirmDialogConfirm) confirmDialogConfirm.disabled = true;
+              await apiPost("/api/workDelete", {workId});
+              closeConfirmDialog();
+              if(gid){
+                WORK_PUBLISHED_GIDS.delete(gid);
+                const btn = document.querySelector(`.record-card[data-gid="${gid}"] .publish-btn`);
+                if(btn) setPublishButtonState(btn, false);
+              }
+              if(document.body.dataset.page === "works"){
+                await loadAndRenderWorks();
+              }
+              if(workDetailDialog && workDetailDialog.open) closeDialog(workDetailDialog);
+              if(workDialog) closeDialog(workDialog);
+              toast("作品已删除","success");
+            }catch(e){
+              if(confirmDialogConfirm) confirmDialogConfirm.disabled = false;
+              toast(e?.message || "删除失败","error");
+            }
+          }
+        });
+      });
+    }
     if(workDialog && !workDialog.__hooked){
       workDialog.addEventListener("close", ()=>{ resetWorkDialog(); });
       workDialog.__hooked = true;
@@ -4690,6 +5124,28 @@ const criticalInput=document.getElementById("criticalInput");
         }else{
           workFinishedAtInput.focus();
         }
+      });
+    }
+    if(workDurationHours){
+      workDurationHours.addEventListener("blur", normalizeDurationInputs);
+      workDurationHours.addEventListener("change", normalizeDurationInputs);
+    }
+    if(workDurationMinutes){
+      workDurationMinutes.addEventListener("blur", normalizeDurationInputs);
+      workDurationMinutes.addEventListener("change", normalizeDurationInputs);
+    }
+    if(workDetailClose) workDetailClose.addEventListener("click", ()=>{ if(workDetailDialog) closeDialog(workDetailDialog); });
+    if(workDetailShare) workDetailShare.addEventListener("click", ()=>{ toast("敬请期待","info"); });
+    if(workDetailEdit){
+      workDetailEdit.addEventListener("click", ()=>{
+        if(workDetailDialog && workDetailDialog.open) closeDialog(workDetailDialog);
+        if(WORK_STATE.editItem) openWorkEdit(WORK_STATE.editItem);
+      });
+    }
+    if(worksEmptyAction){
+      worksEmptyAction.addEventListener("click", ()=>{
+        showPage("stats", {scrollTop:true, smooth:true});
+        setRecordsTab("consume");
       });
     }
 
@@ -4782,7 +5238,9 @@ const criticalInput=document.getElementById("criticalInput");
       await loadMasterPalette();
       setAuthUI();
       bindSortAndViewToggles();
-      initAppNavigation();
+    initAppNavigation();
+    syncHeaderHeight();
+    window.addEventListener("resize", syncHeaderHeight);
     // ====== Guest tip ======
       const guestTipDialog = document.getElementById("guestTipDialog");
       const guestTipOk = document.getElementById("guestTipOk");

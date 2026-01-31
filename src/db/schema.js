@@ -141,6 +141,7 @@ async function ensureSchema() {
       image_url VARCHAR(512) NOT NULL,
       image_key VARCHAR(512) NULL,
       duration VARCHAR(32) NULL,
+      duration_minutes INT NULL,
       note VARCHAR(256) NULL,
       finished_at DATETIME NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -155,6 +156,7 @@ async function ensureSchema() {
   try { await safeQuery("ALTER TABLE user_works ADD COLUMN image_url VARCHAR(512) NOT NULL"); } catch (e) {}
   try { await safeQuery("ALTER TABLE user_works ADD COLUMN image_key VARCHAR(512) NULL"); } catch (e) {}
   try { await safeQuery("ALTER TABLE user_works ADD COLUMN duration VARCHAR(32) NULL"); } catch (e) {}
+  try { await safeQuery("ALTER TABLE user_works ADD COLUMN duration_minutes INT NULL"); } catch (e) {}
   try { await safeQuery("ALTER TABLE user_works ADD COLUMN note VARCHAR(256) NULL"); } catch (e) {}
   try { await safeQuery("ALTER TABLE user_works ADD COLUMN finished_at DATETIME NULL"); } catch (e) {}
   try { await safeQuery("CREATE UNIQUE INDEX uniq_user_record ON user_works(user_id, record_gid)"); } catch (e) {}
