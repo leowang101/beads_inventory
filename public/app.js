@@ -1407,21 +1407,62 @@ function toast(message,type="success"){
 
     // 明细
     const detailDialog=document.getElementById("detailDialog");
-	    let CURRENT_DETAIL_CODE = null;
+    const confirmDialog = document.getElementById("confirmDialog");
+    const confirmDialogTitle = document.getElementById("confirmDialogTitle");
+    const confirmDialogText = document.getElementById("confirmDialogText");
+    const confirmDialogClose = document.getElementById("confirmDialogClose");
+    const confirmDialogCancel = document.getElementById("confirmDialogCancel");
+    const confirmDialogConfirm = document.getElementById("confirmDialogConfirm");
+    let CONFIRM_PENDING = null;
+    let CONFIRM_CLOSE_HOOKED = false;
+
+    function openConfirmDialog({title, text, confirmLabel, confirmClass, onConfirm}){
+      if(!confirmDialog) return;
+      if(confirmDialogTitle) confirmDialogTitle.textContent = title || "确认操作";
+      if(confirmDialogText) confirmDialogText.textContent = text || "";
+      if(confirmDialogConfirm){
+        confirmDialogConfirm.textContent = confirmLabel || "确认";
+        confirmDialogConfirm.className = confirmClass || "btn-danger";
+      }
+      CONFIRM_PENDING = onConfirm || null;
+      if(!CONFIRM_CLOSE_HOOKED){
+        const onClose = ()=>{ CONFIRM_PENDING = null; if(confirmDialogConfirm) confirmDialogConfirm.disabled = false; };
+        confirmDialog.addEventListener("close", onClose);
+        confirmDialog.addEventListener("cancel", onClose);
+        CONFIRM_CLOSE_HOOKED = true;
+      }
+      openDialog(confirmDialog);
+    }
+    function closeConfirmDialog(){
+      closeDialog(confirmDialog);
+      CONFIRM_PENDING = null;
+      if(confirmDialogConfirm) confirmDialogConfirm.disabled = false;
+    }
+
+    let CURRENT_DETAIL_CODE = null;
 	    document.getElementById("detailClose").addEventListener("click",()=>closeDialog(detailDialog));
 	    document.getElementById("detailDelete").addEventListener("click", async ()=>{
 	      const code = CURRENT_DETAIL_CODE;
 	      if(!code) return;
-	      const ok = confirm("删除色号将清空库存和明细，是否确认删除？");
-	      if(!ok) return;
-	      try{
-	        await apiPost("/api/removeColor", {code});
-	        closeDialog(detailDialog);
-	        await syncAll();
-	        toast("删除成功");
-	      }catch(e){
-	        toast(e?.message || "删除失败","error");
-	      }
+        openConfirmDialog({
+          title: "删除色号",
+          text: "删除色号将清空库存和明细，是否确认删除？",
+          confirmLabel: "确认删除",
+          confirmClass: "btn-danger",
+          onConfirm: async ()=>{
+            try{
+              if(confirmDialogConfirm) confirmDialogConfirm.disabled = true;
+              await apiPost("/api/removeColor", {code});
+              closeConfirmDialog();
+              closeDialog(detailDialog);
+              await syncAll();
+              toast("删除成功");
+            }catch(e){
+              if(confirmDialogConfirm) confirmDialogConfirm.disabled = false;
+              toast(e?.message || "删除失败","error");
+            }
+          }
+        });
 	    });
 
     async function openDetail(code){
@@ -2712,31 +2753,28 @@ function toast(message,type="success"){
     });
 
 
-    // 重置库存
-    const resetDialog = document.getElementById("resetDialog");
     const btnResetAll = document.getElementById("btnResetAll");
-    if(btnResetAll && resetDialog){
-      btnResetAll.addEventListener("click", ()=>openDialog(resetDialog));
-      const closeBtn = document.getElementById("resetClose");
-      const cancelBtn = document.getElementById("resetCancel");
-      if(closeBtn) closeBtn.addEventListener("click", ()=>resetDialog.close());
-      if(cancelBtn) cancelBtn.addEventListener("click", ()=>resetDialog.close());
-      const confirmBtn = document.getElementById("resetConfirm");
-      if(confirmBtn){
-        confirmBtn.addEventListener("click", async ()=>{
-          try{
-            confirmBtn.disabled = true;
-            await apiPost("/api/resetAll", {});
-            await syncAll();
-            resetDialog.close();
-            toast("重置成功","success");
-          }catch{
-            toast("重置失败","error");
-          }finally{
-            confirmBtn.disabled = false;
+    if(btnResetAll){
+      btnResetAll.addEventListener("click", ()=>{
+        openConfirmDialog({
+          title: "重置库存",
+          text: "重置库存会将所有色号数量恢复为0，同时清空历史所有补充和消耗记录，请谨慎操作。是否确认重置？",
+          confirmLabel: "确认重置",
+          confirmClass: "btn-danger",
+          onConfirm: async ()=>{
+            try{
+              if(confirmDialogConfirm) confirmDialogConfirm.disabled = true;
+              await apiPost("/api/resetAll", {});
+              await syncAll();
+              closeConfirmDialog();
+              toast("重置成功","success");
+            }catch{
+              if(confirmDialogConfirm) confirmDialogConfirm.disabled = false;
+              toast("重置失败","error");
+            }
           }
         });
-      }
+      });
     }
 
 
@@ -2786,15 +2824,24 @@ const criticalInput=document.getElementById("criticalInput");
               toast(e.message||"添加失败","error");
             }
           }else{
-            const ok = confirm(`删除色系会清空库存，是否确认删除？\n\n色系：${series}`);
-            if(!ok) return;
-            try{
-              await apiPost("/api/removeSeries",{series});
-              await syncAll();
-              toast(`已删除：${series}`,"success");
-            }catch(e){
-              toast(e.message||"删除失败","error");
-            }
+            openConfirmDialog({
+              title: "删除色系",
+              text: `删除色系会清空库存，是否确认删除？\n\n色系：${series}`,
+              confirmLabel: "确认删除",
+              confirmClass: "btn-danger",
+              onConfirm: async ()=>{
+                try{
+                  if(confirmDialogConfirm) confirmDialogConfirm.disabled = true;
+                  await apiPost("/api/removeSeries",{series});
+                  closeConfirmDialog();
+                  await syncAll();
+                  toast(`已删除：${series}`,"success");
+                }catch(e){
+                  if(confirmDialogConfirm) confirmDialogConfirm.disabled = false;
+                  toast(e.message||"删除失败","error");
+                }
+              }
+            });
           }
           renderSeriesManager();
         });
@@ -2870,18 +2917,27 @@ const criticalInput=document.getElementById("criticalInput");
         del.className = "btn-danger";
         del.textContent = "删除";
         del.addEventListener("click", async()=>{
-          const ok = confirm(`删除分类将清空已标记的图纸分类信息，是否确认删除？\n\n分类：${cat.name}`);
-          if(!ok) return;
-          try{
-            await apiPost("/api/patternCategoryDelete", {id: cat.id});
-            if(ACTIVE_PATTERN_CATEGORY_ID && String(ACTIVE_PATTERN_CATEGORY_ID) === String(cat.id)){
-              ACTIVE_PATTERN_CATEGORY_ID = null;
+          openConfirmDialog({
+            title: "删除分类",
+            text: `删除分类将清空已标记的图纸分类信息，是否确认删除？\n\n分类：${cat.name}`,
+            confirmLabel: "确认删除",
+            confirmClass: "btn-danger",
+            onConfirm: async ()=>{
+              try{
+                if(confirmDialogConfirm) confirmDialogConfirm.disabled = true;
+                await apiPost("/api/patternCategoryDelete", {id: cat.id});
+                if(ACTIVE_PATTERN_CATEGORY_ID && String(ACTIVE_PATTERN_CATEGORY_ID) === String(cat.id)){
+                  ACTIVE_PATTERN_CATEGORY_ID = null;
+                }
+                closeConfirmDialog();
+                await loadPatternCategories();
+                toast("删除成功","success");
+              }catch(e){
+                if(confirmDialogConfirm) confirmDialogConfirm.disabled = false;
+                toast(e?.message || "删除失败","error");
+              }
             }
-            await loadPatternCategories();
-            toast("删除成功","success");
-          }catch(e){
-            toast(e?.message || "删除失败","error");
-          }
+          });
         });
 
         row.appendChild(name);
@@ -3101,93 +3157,6 @@ const criticalInput=document.getElementById("criticalInput");
       }
     });
     const recordsDialog = document.getElementById("recordsDialog");
-    const recordDeleteDialog = document.getElementById("recordDeleteDialog");
-    const recordDeleteTitle = document.getElementById("recordDeleteTitle");
-    const recordDeleteText = document.getElementById("recordDeleteText");
-    const recordDeleteConfirmBtn = document.getElementById("recordDeleteConfirm");
-// record delete confirm: treat as sub-modal (mask should block underlying recordsDialog)
-    function configureRecordDeleteDialog(options = {}){
-      if(recordDeleteTitle){
-        recordDeleteTitle.textContent = options.title || "删除记录";
-      }
-      if(recordDeleteText){
-        recordDeleteText.textContent = options.text || "";
-      }
-      if(recordDeleteConfirmBtn){
-        recordDeleteConfirmBtn.textContent = options.confirmLabel || "确认删除";
-        recordDeleteConfirmBtn.className = options.confirmClass || "btn-danger";
-      }
-    }
-    let pendingTodoCompleteId = null;
-    function resetRecordDeleteDialogState(){
-      pendingTodoCompleteId = null;
-      configureRecordDeleteDialog();
-    }
-    function closeRecordDeleteDialog(){
-      const bd = __ensureBackdrop();
-      bd.classList.remove('submodal');
-      if(recordDeleteDialog){
-        recordDeleteDialog.style.zIndex = "";
-        delete recordDeleteDialog.dataset.submodal;
-      }
-      closeDialog(recordDeleteDialog);
-      resetRecordDeleteDialogState();
-    }
-    if(recordDeleteDialog && !recordDeleteDialog.__submodalHooked){
-      recordDeleteDialog.addEventListener("close", ()=>{
-        const bd = __ensureBackdrop();
-        bd.classList.remove('submodal');
-        recordDeleteDialog.style.zIndex = "";
-        delete recordDeleteDialog.dataset.submodal;
-        resetRecordDeleteDialogState();
-      });
-      recordDeleteDialog.__submodalHooked = true;
-    }
-    async function handleRecordDialogConfirm(){
-      if(!recordDeleteConfirmBtn) return;
-      if(recordDeleteConfirmBtn.disabled) return;
-      recordDeleteConfirmBtn.disabled = true;
-      try{
-        if(pendingTodoCompleteId){
-          const gid = pendingTodoCompleteId;
-          await apiPost("/api/todoPatternComplete", {id: gid});
-          closeRecordDeleteDialog();
-          await syncAll();
-          await loadAndRenderTodoList();
-          RECORDS_STATE.detailCache.clear();
-          RECORDS_STATE.expanded.clear();
-          if(RECORDS_STATE.active !== "stats"){
-            await loadAndRenderRecordGroups();
-          }
-          toast("已转入消耗记录","success");
-          return;
-        }
-        const p = RECORDS_STATE.pendingDelete;
-        if(!p) return;
-        if(p.type === "todo"){
-          await apiPost("/api/todoPatternDelete", {id: p.gid});
-          closeRecordDeleteDialog();
-          await loadAndRenderTodoList();
-          toast("删除成功","success");
-        }else{
-          await apiPost("/api/recordGroupDelete", {gid: p.gid, type: p.type});
-          closeRecordDeleteDialog();
-          RECORDS_STATE.detailCache.clear();
-          RECORDS_STATE.expanded.clear();
-          await syncAll();
-          await loadAndRenderRecordGroups();
-          toast("删除成功","success");
-        }
-      }catch(e){
-        const msg = e?.message || "操作失败";
-        toast(msg, "error");
-      }finally{
-        RECORDS_STATE.pendingDelete = null;
-        if(recordDeleteConfirmBtn){
-          recordDeleteConfirmBtn.disabled = false;
-        }
-      }
-    }
 
     const recordEditDialog = document.getElementById("recordEditDialog");
     const recordEditTitle = document.getElementById("recordEditTitle");
@@ -3204,6 +3173,7 @@ const criticalInput=document.getElementById("criticalInput");
     const recordEditRows = document.getElementById("recordEditRows");
     const recordEditAddRow = document.getElementById("recordEditAddRow");
     const recordEditCancel = document.getElementById("recordEditCancel");
+    const recordEditDelete = document.getElementById("recordEditDelete");
     const recordEditConfirm = document.getElementById("recordEditConfirm");
     const recordEditClose = document.getElementById("recordEditClose");
 
@@ -3228,7 +3198,6 @@ const criticalInput=document.getElementById("criticalInput");
       active: "consume",
       expanded: new Set(),
       detailCache: new Map(),
-      pendingDelete: null,
       pendingEdit: null,
       pageSize: 30,
       cursor: null,
@@ -3284,6 +3253,18 @@ const criticalInput=document.getElementById("criticalInput");
       }else{
         loadAndRenderRecordGroups();
       }
+    }
+
+    if(confirmDialogClose) confirmDialogClose.addEventListener("click", closeConfirmDialog);
+    if(confirmDialogCancel) confirmDialogCancel.addEventListener("click", closeConfirmDialog);
+    if(confirmDialogConfirm){
+      confirmDialogConfirm.addEventListener("click", async ()=>{
+        if(!CONFIRM_PENDING) return closeConfirmDialog();
+        const runner = CONFIRM_PENDING;
+        try{
+          await runner();
+        }catch{}
+      });
     }
 
     function setStatsFilterDays(days){
@@ -3626,12 +3607,6 @@ const criticalInput=document.getElementById("criticalInput");
         const k = _recKey(type, gid);
         const expanded = RECORDS_STATE.expanded.has(k);
 
-        const btnDel = document.createElement("button");
-        btnDel.type="button";
-        btnDel.className="link-action";
-        btnDel.textContent="删除";
-        btnDel.addEventListener("click", ()=>openRecordDeleteConfirm(type, gid));
-
         const btnEdit = document.createElement("button");
         btnEdit.type="button";
         btnEdit.className="link-action";
@@ -3713,11 +3688,10 @@ const criticalInput=document.getElementById("criticalInput");
           metaLine.appendChild(cTime);
           metaLine.appendChild(totalText);
 
-          const actions = document.createElement("div");
-          actions.className="record-actions";
-          actions.appendChild(btnDel);
-          actions.appendChild(btnEdit);
-          actions.appendChild(btnToggle);
+        const actions = document.createElement("div");
+        actions.className="record-actions";
+        actions.appendChild(btnEdit);
+        actions.appendChild(btnToggle);
 
           if(patternCategoryId){
             const catName = getPatternCategoryNameById(patternCategoryId);
@@ -3771,11 +3745,10 @@ const criticalInput=document.getElementById("criticalInput");
           metaLine.appendChild(cTime);
           metaLine.appendChild(totalText);
 
-          const actions = document.createElement("div");
-          actions.className="record-actions";
-          actions.appendChild(btnDel);
-          actions.appendChild(btnEdit);
-          actions.appendChild(btnToggle);
+        const actions = document.createElement("div");
+        actions.className="record-actions";
+        actions.appendChild(btnEdit);
+        actions.appendChild(btnToggle);
 
           main.appendChild(title);
           main.appendChild(metaLine);
@@ -3836,12 +3809,6 @@ const criticalInput=document.getElementById("criticalInput");
         btnDone.addEventListener("click", ()=>{
           openTodoCompleteConfirm(gid);
         });
-
-        const btnDel = document.createElement("button");
-        btnDel.type="button";
-        btnDel.className="link-action";
-        btnDel.textContent="删除";
-        btnDel.addEventListener("click", ()=>openTodoDeleteConfirm(gid));
 
         const btnEdit = document.createElement("button");
         btnEdit.type="button";
@@ -3912,7 +3879,6 @@ const criticalInput=document.getElementById("criticalInput");
         const actions = document.createElement("div");
         actions.className="record-actions";
         actions.appendChild(btnEdit);
-        actions.appendChild(btnDel);
         actions.appendChild(btnDone);
 
         main.appendChild(head);
@@ -4059,6 +4025,10 @@ const criticalInput=document.getElementById("criticalInput");
           ? "编辑消耗记录"
           : (type==="todo" ? "编辑待拼图纸" : "编辑补充记录");
       }
+      if(recordEditDelete){
+        recordEditDelete.textContent = type==="todo" ? "删除待拼" : "删除记录";
+        recordEditDelete.style.display = "";
+      }
       if(recordEditPatternField) recordEditPatternField.style.display = isConsumeLike ? "" : "none";
       if(recordEditCategoryField) recordEditCategoryField.style.display = isConsumeLike ? "" : "none";
       if(recordEditImageField) recordEditImageField.style.display = isConsumeLike ? "" : "none";
@@ -4099,6 +4069,7 @@ const criticalInput=document.getElementById("criticalInput");
       RECORDS_STATE.pendingEdit = null;
       RECORD_EDIT_ALLOW_REMOVE = true;
       resetRecordEditImage("");
+      if(recordEditDelete) recordEditDelete.style.display = "none";
     }
 
     async function doRecordEdit(){
@@ -4183,63 +4154,96 @@ const criticalInput=document.getElementById("criticalInput");
     }
 
     function openRecordDeleteConfirm(type, gid){
-      RECORDS_STATE.pendingDelete = {type, gid};
       const message = type==="consume"
         ? "删除会补回已扣减的拼豆库存，是否确认删除"
         : "删除会减掉已补充的拼豆库存，是否确认删除";
-      configureRecordDeleteDialog({
+      openConfirmDialog({
         title: "删除记录",
         text: message,
         confirmLabel: "确认删除",
-        confirmClass: "btn-danger"
+        confirmClass: "btn-danger",
+        onConfirm: async ()=>{
+          try{
+            if(confirmDialogConfirm) confirmDialogConfirm.disabled = true;
+            await apiPost("/api/recordGroupDelete", {gid, type});
+            closeConfirmDialog();
+            RECORDS_STATE.detailCache.clear();
+            RECORDS_STATE.expanded.clear();
+            await syncAll();
+            await loadAndRenderRecordGroups();
+            toast("删除成功","success");
+          }catch(e){
+            if(confirmDialogConfirm) confirmDialogConfirm.disabled = false;
+            toast(e?.message || "删除失败","error");
+          }
+        }
       });
-      openDialog(recordDeleteDialog);
-      const bd = __ensureBackdrop();
-      bd.classList.add('submodal');
-      recordDeleteDialog.style.zIndex = '9003';
-      recordDeleteDialog.dataset.submodal = '1';
     }
 
     function openTodoDeleteConfirm(gid){
-      RECORDS_STATE.pendingDelete = {type: "todo", gid};
-      configureRecordDeleteDialog({
+      openConfirmDialog({
         title: "删除记录",
         text: "删除会移除待拼图纸记录，是否确认删除",
         confirmLabel: "确认删除",
-        confirmClass: "btn-danger"
+        confirmClass: "btn-danger",
+        onConfirm: async ()=>{
+          try{
+            if(confirmDialogConfirm) confirmDialogConfirm.disabled = true;
+            await apiPost("/api/todoPatternDelete", {id: gid});
+            closeConfirmDialog();
+            await loadAndRenderTodoList();
+            toast("删除成功","success");
+          }catch(e){
+            if(confirmDialogConfirm) confirmDialogConfirm.disabled = false;
+            toast(e?.message || "删除失败","error");
+          }
+        }
       });
-      openDialog(recordDeleteDialog);
-      const bd = __ensureBackdrop();
-      bd.classList.add('submodal');
-      recordDeleteDialog.style.zIndex = '9003';
-      recordDeleteDialog.dataset.submodal = '1';
     }
 
     function openTodoCompleteConfirm(gid){
-      if(!gid || !recordDeleteDialog) return;
-      pendingTodoCompleteId = gid;
-      configureRecordDeleteDialog({
+      if(!gid) return;
+      openConfirmDialog({
         title: "确认已拼完",
         text: "是否确认将图纸计入消耗？",
         confirmLabel: "确认",
-        confirmClass: "btn-todo-done"
+        confirmClass: "btn-danger",
+        onConfirm: async ()=>{
+          try{
+            if(confirmDialogConfirm) confirmDialogConfirm.disabled = true;
+            await apiPost("/api/todoPatternComplete", {id: gid});
+            closeConfirmDialog();
+            await syncAll();
+            await loadAndRenderTodoList();
+            RECORDS_STATE.detailCache.clear();
+            RECORDS_STATE.expanded.clear();
+            if(RECORDS_STATE.active !== "stats"){
+              await loadAndRenderRecordGroups();
+            }
+            toast("已转入消耗记录","success");
+          }catch(e){
+            if(confirmDialogConfirm) confirmDialogConfirm.disabled = false;
+            toast(e?.message || "操作失败","error");
+          }
+        }
       });
-      openDialog(recordDeleteDialog);
-      const bd = __ensureBackdrop();
-      bd.classList.add('submodal');
-      recordDeleteDialog.style.zIndex = '9003';
-      recordDeleteDialog.dataset.submodal = '1';
     }
 
     if(recordsDialog){
       setRecordsTab(RECORDS_STATE.active);
     }
-    document.getElementById("recordDeleteClose").addEventListener("click", closeRecordDeleteDialog);
-    document.getElementById("recordDeleteCancel").addEventListener("click", closeRecordDeleteDialog);
-    document.getElementById("recordDeleteConfirm").addEventListener("click", handleRecordDialogConfirm);
     if(recordEditClose) recordEditClose.addEventListener("click", closeRecordEditDialog);
     if(recordEditCancel) recordEditCancel.addEventListener("click", closeRecordEditDialog);
     if(recordEditConfirm) recordEditConfirm.addEventListener("click", doRecordEdit);
+    if(recordEditDelete){
+      recordEditDelete.addEventListener("click", ()=>{
+        const p = RECORDS_STATE.pendingEdit;
+        if(!p || !p.gid) return;
+        closeRecordEditDialog();
+        if(p.type === "todo") openTodoDeleteConfirm(p.gid);
+        else openRecordDeleteConfirm(p.type, p.gid);
+      });
+    }
     if(recordEditImageInput){
       recordEditImageInput.addEventListener("change", ()=>{
         const file = recordEditImageInput.files?.[0];

@@ -433,7 +433,7 @@
         </div>
       </section>
 
-      <section class="panel">
+      <section class="panel panel-night">
         <div class="panel-title">
           <h2>黑夜模式</h2>
           <div class="me-actions">
@@ -579,62 +579,30 @@
     </div>
   </dialog>
 
-  <!-- 删除色号（二次确认） -->
-  <dialog id="deleteColorDialog">
+  <!-- 通用确认弹窗 -->
+  <dialog id="confirmDialog">
     <div class="modal-head">
-      <h3>删除色号</h3>
-      <button id="deleteColorClose" type="button">关闭</button>
+      <h3 id="confirmDialogTitle">确认操作</h3>
+      <button id="confirmDialogClose" type="button">关闭</button>
     </div>
     <div class="modal-body">
-      <div class="help" style="font-size:12px; line-height:1.6;">
-        删除色号将清空库存和明细，是否确认删除？
-	      </div>
-	    <div class="modal-foot">
-      <button id="deleteColorCancel" class="btn-ghost" type="button">取消</button>
-      <button id="deleteColorConfirm" class="btn-danger" type="button">确认删除</button>
-    </div>
-  </dialog>
-  <!-- 重置库存 -->
-  <dialog id="resetDialog">
-    <div class="modal-head">
-      <h3>重置库存</h3>
-      <button id="resetClose">关闭</button>
-    </div>
-    <div class="modal-body">
-      <div class="help" style="font-size:12px; line-height:1.6;">
-        重置库存会将所有色号数量恢复为0，同时清空历史所有补充和消耗记录，请谨慎操作。是否确认重置？
-      </div>
+      <div class="help" id="confirmDialogText" style="font-size:12px; line-height:1.6;"></div>
     </div>
     <div class="modal-foot">
-      <button id="resetCancel" class="btn-ghost" type="button">取消</button>
-      <button id="resetConfirm" class="btn-danger" type="button">确认重置</button>
+      <button id="confirmDialogCancel" class="btn-ghost" type="button">取消</button>
+      <button id="confirmDialogConfirm" class="btn-danger" type="button">确认</button>
     </div>
   </dialog>
-
-
-
-
   <!-- 拼豆记录 -->
-  <!-- 删除记录二次确认 -->
-  <dialog id="recordDeleteDialog">
-    <div class="modal-head">
-      <h3 id="recordDeleteTitle">删除记录</h3>
-      <button id="recordDeleteClose">关闭</button>
-    </div>
-    <div class="modal-body">
-      <div class="help" id="recordDeleteText" style="font-size:12px; line-height:1.6;"></div>
-    </div>
-    <div class="modal-foot">
-      <button id="recordDeleteCancel" class="btn-ghost" type="button">取消</button>
-      <button id="recordDeleteConfirm" class="btn-danger" type="button">确认删除</button>
-    </div>
-  </dialog>
 
   <!-- 编辑记录 -->
   <dialog id="recordEditDialog">
     <div class="modal-head">
       <h3 id="recordEditTitle">编辑记录</h3>
-      <button id="recordEditClose">关闭</button>
+      <div class="modal-head-actions">
+        <button id="recordEditDelete" class="btn-danger-outline" type="button">删除记录</button>
+        <button id="recordEditClose">关闭</button>
+      </div>
     </div>
       <div class="modal-body">
         <div class="modal-field" id="recordEditPatternField">

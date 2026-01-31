@@ -459,6 +459,9 @@ main{
       gap:12px;
       margin-bottom:12px;
     }
+    .panel-night .panel-title{
+      margin-bottom:0;
+    }
     .panel-title h2{
       font-size:16px; 
       margin:0;
@@ -644,21 +647,6 @@ main{
       #detailDialog td:nth-child(1){ word-break: normal; }
     }
 
-    /* 重置库存确认弹窗按钮布局（避免两按钮在小屏溢出） */
-    #resetDialog .modal-foot{
-      justify-content:flex-end;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    #resetDialog .modal-foot button{
-      min-width:120px;
-    }
-    @media (max-width: 560px){
-      #resetDialog .modal-foot button{
-        flex:1;
-        min-width:0;
-      }
-    }
     /* 编辑消耗记录弹窗：按钮之间加间距 */
     #recordEditDialog .modal-foot{
       gap:12px;
@@ -716,6 +704,14 @@ main{
       padding:6px 8px; font-size:11px;
     }
     .modal-head-actions{display:flex; gap:8px; align-items:center;}
+    .btn-danger-outline{
+      background: rgba(255,107,107,.12);
+      border-color: rgba(255,107,107,.45);
+      color: var(--danger);
+      border-radius:999px;
+      padding:6px 10px;
+    }
+    #recordEditDelete{display:none;}
     .modal-body{
       padding:14px 16px 16px;
       display:flex; flex-direction:column; gap:12px;
@@ -1131,11 +1127,11 @@ main{
   }
   @keyframes loadingSpin { to { transform: rotate(360deg); } }
 
-  /* --- Record delete confirm sub-modal tweaks (only for #recordDeleteDialog) --- */
+  /* --- Confirm dialog layout --- */
   .modal-backdrop.submodal{ z-index: 9002; }
-  #recordDeleteDialog{ width: min(520px, 86vw); }
-  #recordDeleteDialog .modal-foot{ gap: 12px; }
-  #recordDeleteDialog .modal-foot button{ min-width: 0; flex: 1 1 0; }
+  #confirmDialog{ width: min(520px, 86vw); }
+  #confirmDialog .modal-foot{ gap: 12px; flex-wrap: wrap; }
+  #confirmDialog .modal-foot button{ min-width: 0; flex: 1 1 0; }
   #recordEditDialog{ width: min(680px, 92vw); }
   #todoAddDialog .modal-foot{ gap: 12px; flex-wrap: wrap; }
   #todoAddDialog .modal-foot button{ min-width: 0; flex: 1 1 0; }
