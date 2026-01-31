@@ -3495,13 +3495,14 @@ const criticalInput=document.getElementById("criticalInput");
         toast("裁剪组件加载失败，请稍后再试","error");
         return;
       }
-      if(!workCropperWrap.__gestureGuard){
+      const cropperStage = workCropperWrap.querySelector(".work-cropper-stage");
+      if(cropperStage && !cropperStage.__gestureGuard){
         const guard = (e)=>{
           if(e.cancelable) e.preventDefault();
         };
-        workCropperWrap.addEventListener("touchstart", guard, {passive:false});
-        workCropperWrap.addEventListener("touchmove", guard, {passive:false});
-        workCropperWrap.__gestureGuard = true;
+        cropperStage.addEventListener("touchstart", guard, {passive:false});
+        cropperStage.addEventListener("touchmove", guard, {passive:false});
+        cropperStage.__gestureGuard = true;
       }
       if(workDialog) workDialog.classList.add("is-locked");
       if(workCropperDialog) openDialog(workCropperDialog);
