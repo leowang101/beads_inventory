@@ -296,6 +296,19 @@ function formatTimeSecondParts(iso){
         return {date:String(iso||""), time:""};
       }
     }
+    function formatTimeMinuteString(iso){
+      if(!iso) return "";
+      try{
+        let d = (typeof iso==="number") ? new Date(iso) : new Date(iso);
+        if(isNaN(d.getTime()) && typeof iso==="string"){
+          d=new Date(iso.replace(" ","T"));
+        }
+        if(isNaN(d.getTime())) return String(iso);
+        return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+      }catch{
+        return String(iso||"");
+      }
+    }
     function timePartsHtml(parts){
       const d = parts?.date ?? "";
       const t = parts?.time ?? "";
@@ -3609,7 +3622,7 @@ const criticalInput=document.getElementById("criticalInput");
         const patternClean = (pattern==="手动调整") ? "" : pattern;
         const total = Number(g.total ?? g.sum ?? g.totalQty ?? 0) || 0;
 
-        const tp = formatTimeSecondParts(ts);
+          const tpText = formatTimeMinuteString(ts);
         const k = _recKey(type, gid);
         const expanded = RECORDS_STATE.expanded.has(k);
 
@@ -3690,12 +3703,12 @@ const criticalInput=document.getElementById("criticalInput");
           metaLine.className = "record-meta-line";
 
           const cTime = document.createElement("div");
-          cTime.className = "record-time";
-          cTime.innerHTML = timePartsHtml(tp);
+          cTime.className = "record-time record-meta-item";
+          cTime.innerHTML = `<span class="meta-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span class="meta-text">${escapeHtml(tpText)}</span>`;
 
           const totalText = document.createElement("div");
-          totalText.className = "record-total";
-          totalText.textContent = `总消耗：${total}`;
+          totalText.className = "record-total record-meta-item";
+          totalText.innerHTML = `<span class="meta-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3.5"></circle></svg></span><span class="meta-text">${escapeHtml(formatNumber(total))}</span>`;
 
           metaLine.appendChild(cTime);
           metaLine.appendChild(totalText);
@@ -3748,12 +3761,12 @@ const criticalInput=document.getElementById("criticalInput");
           metaLine.className = "record-meta-line";
 
           const cTime = document.createElement("div");
-          cTime.className = "record-time";
-          cTime.innerHTML = timePartsHtml(tp);
+          cTime.className = "record-time record-meta-item";
+          cTime.innerHTML = `<span class="meta-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span class="meta-text">${escapeHtml(tpText)}</span>`;
 
           const totalText = document.createElement("div");
-          totalText.className = "record-total";
-          totalText.textContent = `总补充：${total}`;
+          totalText.className = "record-total record-meta-item";
+          totalText.innerHTML = `<span class="meta-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3.5"></circle></svg></span><span class="meta-text">${escapeHtml(formatNumber(total))}</span>`;
 
           metaLine.appendChild(cTime);
           metaLine.appendChild(totalText);
@@ -3815,7 +3828,7 @@ const criticalInput=document.getElementById("criticalInput");
         const patternClean = (pattern==="手动调整") ? "" : pattern;
         const total = Number(g.total ?? g.sum ?? g.totalQty ?? 0) || 0;
 
-        const tp = formatTimeSecondParts(ts);
+        const tpText = formatTimeMinuteString(ts);
         const btnDone = document.createElement("button");
         btnDone.type="button";
         btnDone.className="link-action btn-todo-done";
@@ -3886,12 +3899,12 @@ const criticalInput=document.getElementById("criticalInput");
         metaLine.className = "record-meta-line";
 
         const cTime = document.createElement("div");
-        cTime.className = "record-time";
-        cTime.innerHTML = timePartsHtml(tp);
+        cTime.className = "record-time record-meta-item";
+        cTime.innerHTML = `<span class="meta-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span class="meta-text">${escapeHtml(tpText)}</span>`;
 
         const totalText = document.createElement("div");
-        totalText.className = "record-total";
-        totalText.textContent = `总消耗：${total}`;
+        totalText.className = "record-total record-meta-item";
+        totalText.innerHTML = `<span class="meta-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3.5"></circle></svg></span><span class="meta-text">${escapeHtml(formatNumber(total))}</span>`;
 
         metaLine.appendChild(cTime);
         metaLine.appendChild(totalText);

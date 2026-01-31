@@ -1729,7 +1729,31 @@ body.theme-light #recordsDialog .records-restock .record-thumb::after{
   color:var(--muted);
   font-size:12px;
   white-space:nowrap;
+  gap:10px;
 }
+#recordsDialog .record-meta-item{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+}
+#recordsDialog .record-meta-line .meta-icon{
+  width:14px;
+  height:14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  flex:0 0 auto;
+}
+#recordsDialog .record-meta-line .meta-icon svg{
+  width:14px;
+  height:14px;
+  stroke:currentColor;
+  fill:none;
+  stroke-width:1.6;
+}
+#recordsDialog .record-meta-line .meta-text{white-space:nowrap;}
 #recordsDialog .record-time{
   display:flex;
   align-items:center;
@@ -1739,9 +1763,9 @@ body.theme-light #recordsDialog .records-restock .record-thumb::after{
 #recordsDialog .record-time .dt-date{white-space:nowrap;}
 #recordsDialog .record-time .dt-time{white-space:nowrap;}
 #recordsDialog .record-total{
-  margin-left:8px;
-  padding-left:8px;
-  border-left:1px solid var(--border);
+  margin-left:0;
+  padding-left:0;
+  border-left:0;
   white-space:nowrap;
 }
 #recordsDialog .record-actions{
@@ -1964,7 +1988,31 @@ body.theme-light #todoDialog .records-consume .record-thumb::after{
   color:var(--muted);
   font-size:12px;
   white-space:nowrap;
+  gap:10px;
 }
+#todoDialog .record-meta-item{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+}
+#todoDialog .record-meta-line .meta-icon{
+  width:14px;
+  height:14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  flex:0 0 auto;
+}
+#todoDialog .record-meta-line .meta-icon svg{
+  width:14px;
+  height:14px;
+  stroke:currentColor;
+  fill:none;
+  stroke-width:1.6;
+}
+#todoDialog .record-meta-line .meta-text{white-space:nowrap;}
 #todoDialog .record-time{
   display:flex;
   align-items:center;
@@ -1974,9 +2022,9 @@ body.theme-light #todoDialog .records-consume .record-thumb::after{
 #todoDialog .record-time .dt-date{white-space:nowrap;}
 #todoDialog .record-time .dt-time{white-space:nowrap;}
 #todoDialog .record-total{
-  margin-left:8px;
-  padding-left:8px;
-  border-left:1px solid var(--border);
+  margin-left:0;
+  padding-left:0;
+  border-left:0;
   white-space:nowrap;
 }
 #todoDialog .record-actions{
@@ -2133,7 +2181,7 @@ body.theme-light #todoDialog .records-consume .record-thumb::after{
   #recordsDialog .record-thumb{width:72px; height:72px; border-radius:14px;}
   #recordsDialog .record-title{font-size:12px;}
   #recordsDialog .record-meta-line{font-size:11px;}
-  #recordsDialog .record-total{margin-left:6px; padding-left:6px;}
+  #recordsDialog .record-total{margin-left:0; padding-left:0; border-left:0;}
   #recordsDialog .record-actions{gap:8px; padding-top:8px;}
   #recordsDialog .record-actions .link-action{padding:0 7px; min-width:50px; height:24px; font-size:11px;}
   #recordsDialog .record-actions .record-toggle-btn svg{width:11px; height:11px;}
@@ -2198,7 +2246,7 @@ body.theme-light #todoDialog .records-consume .record-thumb::after{
   #todoDialog .record-thumb{width:72px; height:72px; border-radius:14px;}
   #todoDialog .record-title{font-size:12px;}
   #todoDialog .record-meta-line{font-size:11px;}
-  #todoDialog .record-total{margin-left:6px; padding-left:6px;}
+  #todoDialog .record-total{margin-left:0; padding-left:0; border-left:0;}
   #todoDialog .record-actions{gap:8px; padding-top:8px;}
   #todoDialog .record-actions .link-action{padding:0 7px; min-width:50px; height:24px; font-size:11px;}
   #todoDialog .record-actions .record-toggle-btn svg{width:11px; height:11px;}
