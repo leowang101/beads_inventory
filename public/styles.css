@@ -1759,10 +1759,21 @@ body.theme-light #worksStats .stats-card{
 .works-grid{
   -webkit-column-count:2;
   column-count:2;
-  -webkit-column-gap:12px;
-  column-gap:12px;
+  -webkit-column-gap:16px;
+  column-gap:16px;
   -webkit-column-fill: balance;
   column-fill: balance;
+}
+.works-grid.is-dual{
+  display:grid;
+  -webkit-column-count: initial;
+  column-count: initial;
+  column-gap: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:16px;
+}
+.works-grid.is-dual .work-card{
+  margin-bottom:0;
 }
 .work-card{
   -webkit-column-break-inside: avoid;
@@ -1773,12 +1784,12 @@ body.theme-light #worksStats .stats-card{
   background: var(--panel-2);
   overflow:hidden;
   cursor:pointer;
-  box-shadow: 0 6px 14px rgba(0,0,0,.12);
+  box-shadow: 0 6px 12px rgba(0,0,0,.12);
   transition: transform .18s ease, box-shadow .18s ease;
 }
 .work-card:hover{
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0,0,0,.2);
+  box-shadow: 0 10px 18px rgba(0,0,0,.2);
 }
 .work-card img{
   width:100%;

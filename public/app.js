@@ -347,6 +347,14 @@ function formatTimeSecondParts(iso){
       if(h > 0) return `${h}小时`;
       return `${m}分钟`;
     }
+    function formatDurationShort(total){
+      const mins = Number(total) || 0;
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if(h > 0 && m > 0) return `${h}h${m}min`;
+      if(h > 0) return `${h}h`;
+      return `${m}min`;
+    }
     function timePartsHtml(parts){
       const d = parts?.date ?? "";
       const t = parts?.time ?? "";
@@ -4485,7 +4493,7 @@ const criticalInput=document.getElementById("criticalInput");
         const totalMinutes = Number(data?.totalDurationMinutes ?? 0) || 0;
         worksTotalCount.textContent = formatNumber(totalCount);
         worksTotalConsume.textContent = formatNumber(totalConsume);
-        worksTotalDuration.textContent = totalMinutes > 0 ? formatDurationMinutes(totalMinutes) : "0分钟";
+        worksTotalDuration.textContent = totalMinutes > 0 ? formatDurationShort(totalMinutes) : "0min";
       }catch(e){
         toast(e?.message || "加载作品统计失败","error");
       }
@@ -4495,6 +4503,7 @@ const criticalInput=document.getElementById("criticalInput");
       if(!worksList || !worksEmpty) return;
       worksList.innerHTML = "";
       const list = Array.isArray(items) ? items : [];
+      worksList.classList.toggle("is-dual", list.length > 0 && list.length <= 2);
       if(list.length === 0){
         worksEmpty.style.display = "block";
         if(worksStats) worksStats.style.display = "none";
