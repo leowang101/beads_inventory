@@ -791,6 +791,13 @@
 
 <div id="backdrop" class="backdrop" hidden></div>
 
+  <div id="globalLoading" class="loading-overlay" aria-hidden="true" aria-live="polite" role="dialog" aria-modal="true" tabindex="-1">
+    <div class="loading-card">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <div class="loading-text" id="globalLoadingText">处理中，请稍候…</div>
+    </div>
+  </div>
+
   <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
 
     <script defer src="/app.js"></script>
@@ -999,20 +1006,29 @@
     async function uploadPatternImage(file){
       if(!file) return null;
       if(!isAllowedImageFile(file)) throw new Error("仅支持 JPG/PNG/WebP 图片");
-      const oss = await ensureOssClient();
-      const prepared = await compressImageFile(file);
-      const objectKey = buildObjectKey(oss.uploadPrefix, prepared.ext);
-      const mime = prepared.mime || file.type || "image/jpeg";
-      const result = await oss.client.multipartUpload(objectKey, prepared.blob, { mime });
-      const base = String(oss.cdnBaseUrl || "https://img.leobeads.xyz").replace(/\/+$/g, "");
-      const cdnUrl = `${base}/${objectKey}`;
-      return {
-        objectKey,
-        cdnUrl,
-        etag: result?.etag || "",
-        size: prepared.blob?.size || file.size || 0,
-        mime
-      };
+      if(typeof window.showGlobalLoading === "function"){
+        window.showGlobalLoading("图片上传中，请稍候…");
+      }
+      try{
+        const oss = await ensureOssClient();
+        const prepared = await compressImageFile(file);
+        const objectKey = buildObjectKey(oss.uploadPrefix, prepared.ext);
+        const mime = prepared.mime || file.type || "image/jpeg";
+        const result = await oss.client.multipartUpload(objectKey, prepared.blob, { mime });
+        const base = String(oss.cdnBaseUrl || "https://img.leobeads.xyz").replace(/\/+$/g, "");
+        const cdnUrl = `${base}/${objectKey}`;
+        return {
+          objectKey,
+          cdnUrl,
+          etag: result?.etag || "",
+          size: prepared.blob?.size || file.size || 0,
+          mime
+        };
+      }finally{
+        if(typeof window.hideGlobalLoading === "function"){
+          window.hideGlobalLoading();
+        }
+      }
     }
 
 

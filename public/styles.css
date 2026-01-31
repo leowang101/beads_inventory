@@ -1060,7 +1060,7 @@ main{
       .grid{grid-template-columns: repeat(2, minmax(0, 1fr));}
     }
   
-      /* --- Modal backdrop (avoid <dialog>.showModal top-layer so toast can be above) --- */
+  /* --- Modal backdrop (avoid <dialog>.showModal top-layer so toast can be above) --- */
   .modal-backdrop{
     position:fixed; inset:0;
     background:rgba(0,0,0,.35);
@@ -1069,6 +1069,61 @@ main{
     display:none;
   }
   .modal-backdrop.show{ display:block; }
+
+  /* --- Global loading overlay (blocks all interactions) --- */
+  .loading-overlay{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,.4);
+    backdrop-filter: blur(4px);
+    z-index: 9500;
+    cursor: wait;
+  }
+  .loading-overlay.show{ display:flex; }
+  body.loading-open{ overflow:hidden; }
+  .loading-card{
+    width:min(360px, 86vw);
+    border-radius:14px;
+    padding:16px 18px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    background:
+      radial-gradient(120% 120% at 10% 0%, rgba(34,211,238,.18), rgba(34,211,238,0) 55%),
+      radial-gradient(120% 120% at 90% 0%, rgba(249,115,22,.16), rgba(249,115,22,0) 55%),
+      var(--panel-2);
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow: 0 10px 24px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  body.theme-light .loading-card{
+    border-color: rgba(15,23,42,.08);
+    box-shadow: 0 12px 22px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  .loading-spinner{
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    border:3px solid rgba(255,255,255,.18);
+    border-top-color: var(--accent);
+    animation: loadingSpin 0.9s linear infinite;
+    flex:0 0 auto;
+  }
+  body.theme-light .loading-spinner{
+    border-color: rgba(15,23,42,.12);
+    border-top-color: var(--accent);
+  }
+  .loading-text{
+    font-size:12px;
+    color: var(--text);
+    line-height:1.4;
+    text-align:center;
+  }
+  @keyframes loadingSpin { to { transform: rotate(360deg); } }
 
   /* --- Record delete confirm sub-modal tweaks (only for #recordDeleteDialog) --- */
   .modal-backdrop.submodal{ z-index: 9002; }

@@ -1148,6 +1148,52 @@ __refreshBackdrop();
     __refreshBackdrop();
   }
 
+  // ----- global loading overlay -----
+  let __globalLoadingCount = 0;
+  let __globalLoadingEl = null;
+  let __globalLoadingText = null;
+  let __globalLoadingKeyHandler = null;
+  function __ensureGlobalLoading(){
+    if(__globalLoadingEl) return __globalLoadingEl;
+    __globalLoadingEl = document.getElementById("globalLoading");
+    __globalLoadingText = document.getElementById("globalLoadingText");
+    return __globalLoadingEl;
+  }
+  function showGlobalLoading(message){
+    const el = __ensureGlobalLoading();
+    if(!el) return;
+    __globalLoadingCount = Math.max(0, __globalLoadingCount) + 1;
+    if(message && __globalLoadingText) __globalLoadingText.textContent = message;
+    el.classList.add("show");
+    el.setAttribute("aria-hidden","false");
+    document.body.setAttribute("aria-busy","true");
+    document.body.classList.add("loading-open");
+    try{ el.focus(); }catch{}
+    if(__globalLoadingCount === 1){
+      __globalLoadingKeyHandler = (ev)=>{
+        ev.preventDefault();
+        ev.stopPropagation();
+      };
+      document.addEventListener("keydown", __globalLoadingKeyHandler, true);
+    }
+  }
+  function hideGlobalLoading(){
+    const el = __ensureGlobalLoading();
+    if(!el) return;
+    __globalLoadingCount = Math.max(0, __globalLoadingCount - 1);
+    if(__globalLoadingCount > 0) return;
+    el.classList.remove("show");
+    el.setAttribute("aria-hidden","true");
+    document.body.removeAttribute("aria-busy");
+    document.body.classList.remove("loading-open");
+    if(__globalLoadingKeyHandler){
+      document.removeEventListener("keydown", __globalLoadingKeyHandler, true);
+      __globalLoadingKeyHandler = null;
+    }
+  }
+  window.showGlobalLoading = showGlobalLoading;
+  window.hideGlobalLoading = hideGlobalLoading;
+
 function toast(message,type="success"){
       const stack=document.getElementById("toastStack");
       const el=document.createElement("div");
@@ -2030,6 +2076,7 @@ function toast(message,type="success"){
       consumeAiRecognizeBtn.disabled=true;
       const oldText=consumeAiRecognizeBtn.textContent;
       consumeAiRecognizeBtn.textContent="识别中…";
+      showGlobalLoading("AI识别中，请稍候…");
 
       try{
         const fd=new FormData();
@@ -2089,6 +2136,7 @@ function toast(message,type="success"){
       }finally{
         consumeAiRecognizeBtn.disabled=false;
         consumeAiRecognizeBtn.textContent=oldText;
+        hideGlobalLoading();
       }
     }
 
@@ -2632,6 +2680,7 @@ function toast(message,type="success"){
       const hadResult=patternCalcMergedMap.size>0;
       patternCalcRecognizeBtn.disabled=true;
       patternCalcRecognizeBtn.textContent="计算中…";
+      showGlobalLoading("AI识别中，请稍候…");
 
       try{
         const fd=new FormData();
@@ -2670,6 +2719,7 @@ function toast(message,type="success"){
       }finally{
         patternCalcRecognizeBtn.disabled=false;
         updatePatternCalcButton();
+        hideGlobalLoading();
       }
     }
 
