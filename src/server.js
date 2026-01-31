@@ -17,6 +17,7 @@ const patternsRoutes = require("./routes/patterns");
 const inventoryRoutes = require("./routes/inventory");
 const historyRoutes = require("./routes/history");
 const aiRoutes = require("./routes/ai");
+const worksRoutes = require("./routes/works");
 
 const app = express();
 app.use((req, res, next) => {
@@ -38,6 +39,7 @@ app.use(patternsRoutes);
 app.use(inventoryRoutes);
 app.use(historyRoutes);
 app.use(aiRoutes);
+app.use(worksRoutes);
 
 if (SERVE_FRONTEND) {
   app.use(

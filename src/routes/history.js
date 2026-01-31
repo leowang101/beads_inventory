@@ -246,11 +246,32 @@ router.get("/api/recordGroups", requireAuth, withHandler("recordGroups", async (
 
     const [rowsRaw] = await safeQuery(sql, params);
     const rows = Array.isArray(rowsRaw) ? rowsRaw : [];
+    const attachWorkInfo = async (list) => {
+      if(type !== "consume" || !Array.isArray(list) || list.length === 0) return;
+      const gids = list.map(r => String(r.gid || "")).filter(Boolean);
+      if(gids.length === 0) return;
+      const placeholders = gids.map(() => "?").join(",");
+      const [workRows] = await safeQuery(
+        `SELECT id, record_gid AS gid, image_url AS imageUrl
+         FROM user_works
+         WHERE user_id=? AND record_gid IN (${placeholders})`,
+        [req.user.id, ...gids]
+      );
+      const workMap = new Map((workRows || []).map(r => [String(r.gid), r]));
+      list.forEach(item => {
+        const w = workMap.get(String(item.gid || ""));
+        if(w){
+          item.workId = w.id;
+          item.workImageUrl = w.imageUrl;
+        }
+      });
+    };
     if(!pagingEnabled){
       const data = rows.map(r => {
         const { maxId, ...rest } = r;
         return rest;
       });
+      await attachWorkInfo(data);
       return sendJson(res, 200, { ok:true, data, buildTag: BUILD_TAG });
     }
 
@@ -269,6 +290,7 @@ router.get("/api/recordGroups", requireAuth, withHandler("recordGroups", async (
       const { maxId, ...rest } = r;
       return rest;
     });
+    await attachWorkInfo(data);
     sendJson(res, 200, { ok:true, data, buildTag: BUILD_TAG, hasMore, nextCursor });
   }catch(e){
     sendJson(res, 500, { ok:false, message:e.message });
@@ -586,6 +608,28 @@ router.post("/api/recordGroupUpdate", requireAuth, withHandler("recordGroupUpdat
          VALUES ${vals.join(",")}`,
         params
       );
+
+      if(type === "consume" && gid.startsWith("i:")){
+        const [[minRow]] = await q(
+          conn,
+          `SELECT MIN(id) AS minId
+           FROM user_history
+           WHERE user_id=? AND htype=? AND batch_id IS NULL
+             AND created_at=? AND IFNULL(pattern,'')=? AND IFNULL(source,'')=? AND IFNULL(pattern_category_id,0)=?`,
+          [req.user.id, type, createdAt, finalPattern || "", finalSource || "", finalPatternCategoryId ? finalPatternCategoryId : 0]
+        );
+        const minId = Number(minRow?.minId || 0);
+        if(minId > 0){
+          const newGid = `i:${minId}`;
+          if(newGid !== gid){
+            await q(
+              conn,
+              "UPDATE user_works SET record_gid=? WHERE user_id=? AND record_gid=?",
+              [newGid, req.user.id, gid]
+            );
+          }
+        }
+      }
     });
 
     sendJson(res, 200, { ok:true });
@@ -645,6 +689,9 @@ router.post("/api/recordGroupDelete", requireAuth, withHandler("recordGroupDelet
       if(gid.startsWith("b:")){
         const batchId = gid.slice(2);
         await applyDeltaAndDelete(conn, " AND batch_id=? ", [batchId]);
+        if(type === "consume"){
+          await q(conn, "DELETE FROM user_works WHERE user_id=? AND record_gid=?", [req.user.id, gid]);
+        }
         return;
       }
       if(gid.startsWith("i:")){
@@ -662,6 +709,9 @@ router.post("/api/recordGroupDelete", requireAuth, withHandler("recordGroupDelet
           " AND batch_id IS NULL AND created_at=? AND IFNULL(pattern,'')=? AND IFNULL(source,'')=? AND IFNULL(pattern_category_id,0)=? ",
           [base.created_at, base.patternKey, base.sourceKey, Number(base.categoryKey) || 0]
         );
+        if(type === "consume"){
+          await q(conn, "DELETE FROM user_works WHERE user_id=? AND record_gid=?", [req.user.id, gid]);
+        }
         return;
       }
       throw new Error("invalid gid");

@@ -9,6 +9,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='52'%3E🐼%3C/text%3E%3C/svg%3E">
 
     <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.1/dist/cropper.min.css">
 </head>
 <body class="theme-light" data-page="inventory">
 
@@ -643,6 +644,84 @@
     </div>
   </dialog>
 
+  <!-- 发布作品 -->
+  <dialog id="workDialog">
+    <div class="modal-head">
+      <h3>发布作品</h3>
+      <button id="workDialogClose" type="button">关闭</button>
+    </div>
+    <div class="modal-body">
+      <div class="work-upload">
+        <div class="work-upload-box" id="workUploadBox" role="button" tabindex="0" aria-label="上传作品图">
+          <div class="work-upload-placeholder" id="workUploadPlaceholder">
+            <div class="work-upload-illus" aria-hidden="true">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <rect x="8" y="12" width="48" height="40" rx="8"></rect>
+                <path d="M18 40l10-10 8 8 10-12 12 14"></path>
+                <circle cx="24" cy="24" r="4"></circle>
+              </svg>
+            </div>
+            <div class="work-upload-text">点击上传成品图</div>
+          </div>
+          <img id="workUploadPreview" alt="作品预览" />
+        </div>
+        <input type="file" id="workUploadInput" accept="image/png,image/jpeg,image/webp" hidden />
+        <button id="workUploadReupload" class="btn-ghost" type="button" style="display:none;">重新上传</button>
+      </div>
+
+      <div class="modal-field">
+        <label for="workFinishedAt">完成时间</label>
+        <div class="work-datetime" id="workFinishedAtWrap">
+          <input id="workFinishedAt" class="work-datetime-input" type="datetime-local" />
+          <span class="work-datetime-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="4" y="6" width="16" height="14" rx="3"></rect>
+              <path d="M8 4v4M16 4v4M4 10h16"></path>
+              <path d="M12 14v3l2 1"></path>
+            </svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="work-inline-fields">
+        <div class="modal-field">
+        <label for="workDuration">完成时长</label>
+        <input id="workDuration" type="text" placeholder="例如：1小时25分钟" maxlength="32" />
+        </div>
+        <div class="modal-field">
+        <label for="workNote">备注</label>
+        <input id="workNote" type="text" placeholder="任何你想说的话" maxlength="256" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button id="workDialogCancel" class="btn-ghost" type="button">取消</button>
+      <button id="workDialogSave" class="btn-primary" type="button">保存作品</button>
+    </div>
+  </dialog>
+
+  <!-- 裁剪作品图（独立弹窗） -->
+  <dialog id="workCropperDialog" class="work-cropper-dialog" data-lock-backdrop="1" data-submodal="1">
+    <div class="modal-head">
+      <h3>裁剪作品</h3>
+    </div>
+    <div class="modal-body">
+      <div class="work-cropper" id="workCropperWrap" style="display:none;">
+        <div class="work-cropper-stage">
+          <img id="workCropperImage" alt="裁剪作品图" />
+        </div>
+        <div class="work-cropper-controls">
+          <label for="workCropperZoom">缩放</label>
+          <input type="range" id="workCropperZoom" min="1" max="3" step="0.01" value="1" />
+        </div>
+        <div class="work-cropper-actions">
+          <button id="workCropperCancel" class="btn-ghost" type="button">取消裁剪</button>
+          <button id="workCropperConfirm" class="btn-primary" type="button">确认裁剪</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
   <!-- 添加待拼 -->
   <dialog id="todoAddDialog">
     <div class="modal-head">
@@ -784,6 +863,7 @@
 
   <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
 
+    <script defer src="https://unpkg.com/cropperjs@1.6.1/dist/cropper.min.js"></script>
     <script defer src="/app.js"></script>
   <script>    // ----- OSS SDK lazy loader -----
     const OSS_SDK_URL = "https://cdn.jsdelivr.net/npm/ali-oss@6.20.0/dist/aliyun-oss-sdk.min.js";

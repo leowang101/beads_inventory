@@ -132,6 +132,33 @@ async function ensureSchema() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_works (
+      id BIGINT PRIMARY KEY AUTO_INCREMENT,
+      user_id BIGINT NOT NULL,
+      record_gid VARCHAR(96) NOT NULL,
+      record_type VARCHAR(16) NOT NULL DEFAULT 'consume',
+      image_url VARCHAR(512) NOT NULL,
+      image_key VARCHAR(512) NULL,
+      duration VARCHAR(32) NULL,
+      note VARCHAR(256) NULL,
+      finished_at DATETIME NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_user_record(user_id, record_gid),
+      INDEX idx_works_user(user_id),
+      CONSTRAINT fk_works_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  // 兼容老版本：补齐字段/索引（best-effort）
+  try { await safeQuery("ALTER TABLE user_works ADD COLUMN record_type VARCHAR(16) NOT NULL DEFAULT 'consume'"); } catch (e) {}
+  try { await safeQuery("ALTER TABLE user_works ADD COLUMN image_url VARCHAR(512) NOT NULL"); } catch (e) {}
+  try { await safeQuery("ALTER TABLE user_works ADD COLUMN image_key VARCHAR(512) NULL"); } catch (e) {}
+  try { await safeQuery("ALTER TABLE user_works ADD COLUMN duration VARCHAR(32) NULL"); } catch (e) {}
+  try { await safeQuery("ALTER TABLE user_works ADD COLUMN note VARCHAR(256) NULL"); } catch (e) {}
+  try { await safeQuery("ALTER TABLE user_works ADD COLUMN finished_at DATETIME NULL"); } catch (e) {}
+  try { await safeQuery("CREATE UNIQUE INDEX uniq_user_record ON user_works(user_id, record_gid)"); } catch (e) {}
+
 
   // best-effort: 兼容旧库，为“拼豆记录”增加 batch_id（把一次操作的多条明细归并）
   try { await pool.query("ALTER TABLE user_history ADD COLUMN batch_id VARCHAR(64) NULL"); } catch (e) {}

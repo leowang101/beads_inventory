@@ -372,7 +372,7 @@ function formatTimeSecondParts(iso){
         const key = _guestGroupKey(h);
         let g = groups.get(key);
         if(!g){
-          g = {gid:key, ts:h.ts, pattern: pat || "", patternCategoryId: cat, total:0, _items:[]};
+          g = {gid:key, ts:h.ts, pattern: pat || "", patternCategoryId: cat, total:0, _items:[], workId: null};
           groups.set(key, g);
         }
         g.total += Number(h?.qty||0) || 0;
@@ -392,7 +392,7 @@ function formatTimeSecondParts(iso){
         }
         const detail = Array.from(by.entries()).map(([code,qty])=>({code, qty}))
           .sort((a,b)=> (b.qty-a.qty) || sortCodes(a.code,b.code));
-        out.push({gid:g.gid, ts:g.ts, pattern:g.pattern, patternCategoryId: g.patternCategoryId, total:g.total, detail});
+        out.push({gid:g.gid, ts:g.ts, pattern:g.pattern, patternCategoryId: g.patternCategoryId, total:g.total, detail, workId: null});
       }
       out.sort((a,b)=> String(b.ts||"").localeCompare(String(a.ts||"")));
       return out;
@@ -588,6 +588,13 @@ function formatTimeSecondParts(iso){
 
       // guest local short-circuit
       if(!IS_LOGGED_IN){
+
+        if(path==="/api/workPublish"){
+          toast("请登录后发布作品","warn");
+          const err = new Error("unauthorized");
+          err.httpStatus = 401;
+          throw err;
+        }
 
         if(path==="/api/patternCategories"){
           const name = normalizeCategoryName(data?.name);
@@ -890,6 +897,8 @@ function formatTimeSecondParts(iso){
     const bd = document.createElement('div');
     bd.className = 'modal-backdrop';
     bd.addEventListener('click', () => {
+// If a locked modal is open, ignore backdrop clicks
+if(document.querySelector('dialog[open][data-lock-backdrop="1"]')) return;
 // If a sub-modal is open, only close that one (don't affect underlying dialog)
 if(bd.classList.contains('submodal')){
   const sub = document.querySelector('dialog[open][data-submodal="1"]');
@@ -998,14 +1007,18 @@ function toast(message,type="success"){
       setTimeout(()=>el.remove(),2600);
     }
 
-    function buildPill(code){
+    function buildPill(code, qty){
       const pill=document.createElement("span");
       pill.className="pill";
       const sw=document.createElement("span");
       sw.className="swatch";
       sw.style.background=COLORS[code]||"#999";
       const t=document.createElement("span");
-      t.textContent=code;
+      if(typeof qty === "number"){
+        t.textContent=`${code} ${formatNumber(qty)}`;
+      }else{
+        t.textContent=code;
+      }
       pill.appendChild(sw);pill.appendChild(t);
       return pill;
     }
@@ -1024,16 +1037,21 @@ function toast(message,type="success"){
     function renderAlerts(){
       const ltCritical=[];
       Object.keys(COLORS).forEach(code=>{
-        const remain=INVENTORY[code]??0;
-        if(remain<CRITICAL_THRESHOLD) ltCritical.push(code);
+        const remain=Number(INVENTORY[code]??0) || 0;
+        if(remain<CRITICAL_THRESHOLD) ltCritical.push({code, remain});
       });
-      ltCritical.sort(sortCodes);
+      ltCritical.sort((a,b)=>{
+        if(a.remain!==b.remain) return a.remain-b.remain;
+        return sortCodes(a.code,b.code);
+      });
 
       const list300=document.getElementById("listLt300");
       if(list300){
         list300.innerHTML="";
         if(ltCritical.length===0) list300.innerHTML='<span class="empty">暂无</span>';
-        else ltCritical.forEach(c=>list300.appendChild(buildPill(c)));
+        else ltCritical.forEach(({code, remain})=>{
+          list300.appendChild(buildPill(code, remain));
+        });
       }
 
       const countEl=document.getElementById("countLt300");
@@ -3177,6 +3195,26 @@ const criticalInput=document.getElementById("criticalInput");
     const recordEditConfirm = document.getElementById("recordEditConfirm");
     const recordEditClose = document.getElementById("recordEditClose");
 
+    const workDialog = document.getElementById("workDialog");
+    const workDialogClose = document.getElementById("workDialogClose");
+    const workDialogCancel = document.getElementById("workDialogCancel");
+    const workDialogSave = document.getElementById("workDialogSave");
+    const workCropperDialog = document.getElementById("workCropperDialog");
+    const workUploadBox = document.getElementById("workUploadBox");
+    const workUploadPlaceholder = document.getElementById("workUploadPlaceholder");
+    const workUploadPreview = document.getElementById("workUploadPreview");
+    const workUploadInput = document.getElementById("workUploadInput");
+    const workUploadReupload = document.getElementById("workUploadReupload");
+    const workCropperWrap = document.getElementById("workCropperWrap");
+    const workCropperImage = document.getElementById("workCropperImage");
+    const workCropperZoom = document.getElementById("workCropperZoom");
+    const workCropperCancel = document.getElementById("workCropperCancel");
+    const workCropperConfirm = document.getElementById("workCropperConfirm");
+    const workFinishedAtWrap = document.getElementById("workFinishedAtWrap");
+    const workFinishedAtInput = document.getElementById("workFinishedAt");
+    const workDurationInput = document.getElementById("workDuration");
+    const workNoteInput = document.getElementById("workNote");
+
 
     const recordsOnlyWithPattern = document.getElementById("recordsOnlyWithPattern");
     const recordsConsumeTotalChip = document.getElementById("recordsConsumeTotalChip");
@@ -3212,6 +3250,19 @@ const criticalInput=document.getElementById("criticalInput");
     const TODO_STATE = {
       pendingEdit: null
     };
+    const WORK_PUBLISHED_GIDS = new Set();
+    const WORK_STATE = {
+      gid: null,
+      cropper: null,
+      cropperBaseRatio: 1,
+      cropperReady: false,
+      cropperUrl: "",
+      previewUrl: "",
+      croppedFile: null,
+      prevFile: null,
+      busy: false,
+      triggerButton: null
+    };
     const RECORDS_IMG_PLACEHOLDER = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
     let recordListObserver = null;
     let recordListObserverRoot = null;
@@ -3224,6 +3275,260 @@ const criticalInput=document.getElementById("criticalInput");
       const icon = iosIcon(expanded ? "chevronUp" : "chevronDown");
       btn.innerHTML = `<span class="toggle-text">${label}</span><span class="toggle-icon">${icon}</span>`;
       btn.setAttribute("aria-label", label);
+    }
+
+    function setPublishButtonState(btn, published){
+      if(!btn) return;
+      btn.textContent = published ? "已发布" : "发布作品";
+      btn.disabled = !!published;
+      btn.classList.toggle("is-published", !!published);
+    }
+
+    function revokeObjectUrl(url){
+      if(url && typeof url === "string" && url.startsWith("blob:")){
+        try{ URL.revokeObjectURL(url); }catch{}
+      }
+    }
+
+    function cleanupWorkCropper(){
+      if(WORK_STATE.cropper){
+        try{ WORK_STATE.cropper.destroy(); }catch{}
+        WORK_STATE.cropper = null;
+      }
+      if(WORK_STATE.cropperUrl){
+        revokeObjectUrl(WORK_STATE.cropperUrl);
+        WORK_STATE.cropperUrl = "";
+      }
+    }
+
+    function setWorkPreview(url){
+      if(workUploadBox) workUploadBox.classList.toggle("has-preview", !!url);
+      if(workUploadPreview){
+        if(url) workUploadPreview.src = url;
+        else workUploadPreview.removeAttribute("src");
+      }
+      if(workUploadReupload) workUploadReupload.style.display = url ? "" : "none";
+    }
+
+    function updateWorkPreview(url){
+      if(WORK_STATE.previewUrl && WORK_STATE.previewUrl !== url){
+        revokeObjectUrl(WORK_STATE.previewUrl);
+      }
+      WORK_STATE.previewUrl = url || "";
+      setWorkPreview(url);
+    }
+
+    function resetWorkDialog(){
+      WORK_STATE.gid = null;
+      WORK_STATE.croppedFile = null;
+      WORK_STATE.prevFile = null;
+      WORK_STATE.busy = false;
+      WORK_STATE.triggerButton = null;
+      WORK_STATE.cropperBaseRatio = 1;
+      WORK_STATE.cropperReady = false;
+      if(workCropperDialog && workCropperDialog.open){
+        closeDialog(workCropperDialog);
+      }
+      if(workDialog) workDialog.classList.remove("is-locked");
+      const bd = document.querySelector('.modal-backdrop');
+      if(bd) bd.classList.remove('submodal');
+      if(workDurationInput) workDurationInput.value = "";
+      if(workNoteInput) workNoteInput.value = "";
+      if(workFinishedAtInput){
+        const now = new Date();
+        const value = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}T${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+        workFinishedAtInput.value = value;
+      }
+      if(workUploadInput) workUploadInput.value = "";
+      if(workDialogSave) workDialogSave.disabled = true;
+      if(workCropperWrap) workCropperWrap.style.display = "none";
+      cleanupWorkCropper();
+      updateWorkPreview("");
+      if(workUploadPlaceholder) workUploadPlaceholder.style.display = "";
+    }
+
+    function openWorkDialog(gid, btn){
+      if(!workDialog) return;
+      resetWorkDialog();
+      WORK_STATE.gid = String(gid || "");
+      WORK_STATE.triggerButton = btn || null;
+      openDialog(workDialog);
+    }
+
+    function startWorkCropper(file){
+      if(!workCropperWrap || !workCropperImage) return;
+      if(!window.Cropper){
+        toast("裁剪组件加载失败，请稍后再试","error");
+        return;
+      }
+      if(workDialog) workDialog.classList.add("is-locked");
+      if(workCropperDialog) openDialog(workCropperDialog);
+      const bd = document.querySelector('.modal-backdrop');
+      if(bd) bd.classList.add('submodal');
+      if(workCropperZoom){
+        workCropperZoom.disabled = true;
+        workCropperZoom.min = "1";
+        workCropperZoom.max = "3";
+        workCropperZoom.step = "0.01";
+        workCropperZoom.value = "1";
+      }
+      WORK_STATE.cropperReady = false;
+      WORK_STATE.cropperBaseRatio = 1;
+      cleanupWorkCropper();
+      const url = URL.createObjectURL(file);
+      WORK_STATE.cropperUrl = url;
+      workCropperImage.onload = () => {
+        try{
+          WORK_STATE.cropper = new window.Cropper(workCropperImage, {
+            aspectRatio: 1,
+            viewMode: 1,
+            dragMode: "move",
+            autoCropArea: 1,
+            background: false,
+            checkOrientation: false,
+            cropBoxMovable: false,
+            cropBoxResizable: false,
+            toggleDragModeOnDblclick: false,
+            zoomOnTouch: true,
+            zoomOnWheel: false,
+            ready(){
+              const cropper = WORK_STATE.cropper;
+              if(cropper && workCropperZoom){
+                const imageData = cropper.getImageData();
+                const cropBox = cropper.getCropBoxData();
+                let ratio = imageData?.ratio;
+                if(!Number.isFinite(ratio) || ratio <= 0){
+                  const nW = Number(imageData?.naturalWidth || 0);
+                  const nH = Number(imageData?.naturalHeight || 0);
+                  const cW = Number(cropBox?.width || 0);
+                  const cH = Number(cropBox?.height || 0);
+                  if(nW > 0 && nH > 0 && cW > 0 && cH > 0){
+                    ratio = Math.max(cW / nW, cH / nH);
+                  }
+                }
+                if(!Number.isFinite(ratio) || ratio <= 0) ratio = 1;
+                WORK_STATE.cropperBaseRatio = ratio;
+                try{ cropper.zoomTo(ratio); }catch{}
+                workCropperZoom.min = "1";
+                workCropperZoom.max = "3";
+                workCropperZoom.step = "0.01";
+                workCropperZoom.value = "1";
+                workCropperZoom.disabled = false;
+                WORK_STATE.cropperReady = true;
+              }
+            }
+          });
+        }catch(e){
+          toast("裁剪组件初始化失败","error");
+        }
+      };
+      workCropperImage.src = url;
+      workCropperWrap.style.display = "";
+    }
+
+    async function confirmWorkCrop(){
+      if(!WORK_STATE.cropper) return;
+      try{
+        const canvas = WORK_STATE.cropper.getCroppedCanvas({
+          width: 1024,
+          height: 1024,
+          imageSmoothingQuality: "high"
+        });
+        if(!canvas){
+          toast("裁剪失败，请重试","error");
+          return;
+        }
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/webp", 0.92));
+        if(!blob){
+          toast("裁剪失败，请重试","error");
+          return;
+        }
+        const file = new File([blob], `work-${Date.now()}.webp`, { type: "image/webp" });
+        WORK_STATE.croppedFile = file;
+        WORK_STATE.prevFile = null;
+        const previewUrl = URL.createObjectURL(blob);
+        updateWorkPreview(previewUrl);
+        if(workDialogSave) workDialogSave.disabled = false;
+        if(workCropperWrap) workCropperWrap.style.display = "none";
+        cleanupWorkCropper();
+        WORK_STATE.cropperReady = false;
+        if(workCropperDialog) closeDialog(workCropperDialog);
+        if(workDialog) workDialog.classList.remove("is-locked");
+        const bd = document.querySelector('.modal-backdrop');
+        if(bd) bd.classList.remove('submodal');
+      }catch(e){
+        toast("裁剪失败，请重试","error");
+      }
+    }
+
+    function cancelWorkCrop(){
+      if(workCropperWrap) workCropperWrap.style.display = "none";
+      if(workUploadInput) workUploadInput.value = "";
+      cleanupWorkCropper();
+      WORK_STATE.cropperReady = false;
+      if(workCropperDialog) closeDialog(workCropperDialog);
+      if(workDialog) workDialog.classList.remove("is-locked");
+      const bd = document.querySelector('.modal-backdrop');
+      if(bd) bd.classList.remove('submodal');
+      if(WORK_STATE.prevFile){
+        WORK_STATE.croppedFile = WORK_STATE.prevFile;
+        WORK_STATE.prevFile = null;
+        if(workDialogSave) workDialogSave.disabled = false;
+      }else{
+        if(workDialogSave) workDialogSave.disabled = !WORK_STATE.croppedFile;
+      }
+    }
+
+    async function saveWork(){
+      if(WORK_STATE.busy) return;
+      if(!IS_LOGGED_IN){
+        toast("请登录后发布作品","warn");
+        return;
+      }
+      const gid = String(WORK_STATE.gid || "");
+      if(!gid){
+        toast("记录异常，请重试","error");
+        return;
+      }
+      if(!WORK_STATE.croppedFile){
+        toast("请先上传作品图","warn");
+        return;
+      }
+      WORK_STATE.busy = true;
+      if(workDialogSave) workDialogSave.disabled = true;
+      try{
+        const upload = await uploadPatternImage(WORK_STATE.croppedFile);
+        if(!upload || !upload.cdnUrl) throw new Error("图片上传失败");
+        const payload = {
+          gid,
+          type: "consume",
+          imageUrl: upload.cdnUrl,
+          imageKey: upload.objectKey || "",
+          duration: (workDurationInput?.value || "").trim().slice(0, 32) || null,
+          note: (workNoteInput?.value || "").trim().slice(0, 256) || null,
+          finishedAt: (workFinishedAtInput?.value || "").trim() || null
+        };
+        await apiPost("/api/workPublish", payload);
+        WORK_PUBLISHED_GIDS.add(gid);
+        if(WORK_STATE.triggerButton){
+          setPublishButtonState(WORK_STATE.triggerButton, true);
+        }
+        toast("作品保存成功","success");
+        if(workDialog) closeDialog(workDialog);
+      }catch(e){
+        toast(e?.message || "作品保存失败","error");
+      }finally{
+        WORK_STATE.busy = false;
+        if(workDialogSave) workDialogSave.disabled = !WORK_STATE.croppedFile;
+      }
+    }
+
+    function triggerWorkUpload(){
+      if(!IS_LOGGED_IN){
+        toast("请登录后发布作品","warn");
+        return;
+      }
+      if(workUploadInput) workUploadInput.click();
     }
 
     function setRecordsTab(type){
@@ -3690,7 +3995,17 @@ const criticalInput=document.getElementById("criticalInput");
 
         const actions = document.createElement("div");
         actions.className="record-actions";
+        const btnPublish = document.createElement("button");
+        btnPublish.type="button";
+        btnPublish.className="link-action publish-btn";
+        const published = !!(g?.workId || g?.workPublished || g?.published) || WORK_PUBLISHED_GIDS.has(gid);
+        setPublishButtonState(btnPublish, published);
+        btnPublish.addEventListener("click", ()=>{
+          if(btnPublish.disabled) return;
+          openWorkDialog(gid, btnPublish);
+        });
         actions.appendChild(btnEdit);
+        actions.appendChild(btnPublish);
         actions.appendChild(btnToggle);
 
           if(patternCategoryId){
@@ -4295,6 +4610,89 @@ const criticalInput=document.getElementById("criticalInput");
       recordEditDialog.__hooked = true;
     }
 
+    if(workDialogClose) workDialogClose.addEventListener("click", ()=>{ if(workDialog) closeDialog(workDialog); });
+    if(workDialogCancel) workDialogCancel.addEventListener("click", ()=>{ if(workDialog) closeDialog(workDialog); });
+    if(workDialogSave) workDialogSave.addEventListener("click", saveWork);
+    if(workDialog && !workDialog.__hooked){
+      workDialog.addEventListener("close", ()=>{ resetWorkDialog(); });
+      workDialog.__hooked = true;
+    }
+    if(workCropperDialog && !workCropperDialog.__hooked){
+      workCropperDialog.addEventListener("cancel", (e)=>{
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      });
+      workCropperDialog.addEventListener("close", ()=>{
+        if(workDialog) workDialog.classList.remove("is-locked");
+      });
+      workCropperDialog.__hooked = true;
+    }
+
+    if(workUploadBox){
+      workUploadBox.addEventListener("click", triggerWorkUpload);
+      workUploadBox.addEventListener("keydown", (e)=>{
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          triggerWorkUpload();
+        }
+      });
+    }
+    if(workUploadReupload) workUploadReupload.addEventListener("click", triggerWorkUpload);
+    if(workUploadInput){
+      workUploadInput.addEventListener("change", ()=>{
+        const file = workUploadInput.files?.[0];
+        if(!file) return;
+        if(!IS_LOGGED_IN){
+          toast("请登录后发布作品","warn");
+          workUploadInput.value = "";
+          return;
+        }
+        if(!isAllowedImageFile(file)){
+          toast("仅支持 JPG/PNG/WebP 图片","error");
+          workUploadInput.value = "";
+          return;
+        }
+        WORK_STATE.prevFile = WORK_STATE.croppedFile;
+        WORK_STATE.croppedFile = null;
+        if(workDialogSave) workDialogSave.disabled = true;
+        startWorkCropper(file);
+      });
+    }
+    if(workCropperZoom){
+      workCropperZoom.addEventListener("input", ()=>{
+        if(!WORK_STATE.cropper || !WORK_STATE.cropperReady) return;
+        const scale = Number(workCropperZoom.value);
+        if(Number.isFinite(scale)){
+          const base = Number(WORK_STATE.cropperBaseRatio) || 1;
+          WORK_STATE.cropper.zoomTo(base * scale);
+        }
+      });
+    }
+    if(workCropperImage && !workCropperImage.__zoomHooked){
+      workCropperImage.addEventListener("zoom", (e)=>{
+        if(!WORK_STATE.cropperReady) return;
+        const ratio = Number(e?.detail?.ratio);
+        if(workCropperZoom && Number.isFinite(ratio)){
+          const base = Number(WORK_STATE.cropperBaseRatio) || 1;
+          const scale = ratio / base;
+          const clamped = Math.max(1, Math.min(3, scale));
+          workCropperZoom.value = String(clamped);
+        }
+      });
+      workCropperImage.__zoomHooked = true;
+    }
+    if(workCropperCancel) workCropperCancel.addEventListener("click", cancelWorkCrop);
+    if(workCropperConfirm) workCropperConfirm.addEventListener("click", confirmWorkCrop);
+    if(workFinishedAtWrap && workFinishedAtInput){
+      workFinishedAtWrap.addEventListener("click", ()=>{
+        if(typeof workFinishedAtInput.showPicker === "function"){
+          workFinishedAtInput.showPicker();
+        }else{
+          workFinishedAtInput.focus();
+        }
+      });
+    }
+
     document.querySelectorAll("#recordsDialog .tab-nav .tab-btn").forEach(btn=>{
       btn.addEventListener("click", ()=>{
         const tab = String(btn.dataset.tab||"");
@@ -4425,6 +4823,7 @@ if(btnLogout) btnLogout.addEventListener("click", async ()=>{
   AUTH_TOKEN = "";
   IS_LOGGED_IN = false;
   USERNAME = "";
+  WORK_PUBLISHED_GIDS.clear();
   try{ localStorage.removeItem(TOKEN_KEY); }catch{}
   setAuthUI();
   await initGuestDefaults();
@@ -4453,6 +4852,7 @@ if(btnLogout) btnLogout.addEventListener("click", async ()=>{
               try{ localStorage.setItem(TOKEN_KEY, AUTH_TOKEN); }catch{}
               IS_LOGGED_IN = true;
               USERNAME = r.username || u;
+              WORK_PUBLISHED_GIDS.clear();
               setAuthUI();
               closeDialog(loginDialog);
               await loadSettings();
@@ -4489,6 +4889,7 @@ if(btnLogout) btnLogout.addEventListener("click", async ()=>{
               try{ localStorage.setItem(TOKEN_KEY, AUTH_TOKEN); }catch{}
               IS_LOGGED_IN = true;
               USERNAME = r.username || u;
+              WORK_PUBLISHED_GIDS.clear();
               setAuthUI();
               closeDialog(registerDialog);
               await loadSettings();
@@ -4523,6 +4924,7 @@ if(btnLogout) btnLogout.addEventListener("click", async ()=>{
       if(!AUTH_TOKEN){
         IS_LOGGED_IN = false;
         USERNAME = "";
+        WORK_PUBLISHED_GIDS.clear();
         await initGuestDefaults();
       }else{
         IS_LOGGED_IN = true;
